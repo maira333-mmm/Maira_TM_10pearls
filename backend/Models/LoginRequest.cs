@@ -1,4 +1,3 @@
-// Models/LoginRequest.cs
 namespace Backend.Models
 {
     public class LoginRequest

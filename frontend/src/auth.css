@@ -73,7 +73,6 @@ body {
   color: #444;
 }
 
-
 .container input {
   background-color: #eee;
   border: none;
@@ -83,8 +82,13 @@ body {
   border-radius: 8px;
   width: 100%;
   outline: none;
+  color: #000 !important;
+}
+
+.container input::placeholder {
   color: #000;
 }
+
 
 .form-container {
   position: absolute;
@@ -204,4 +208,37 @@ body {
 .container form a:hover {
   text-decoration: underline;
   color: #a80f0f;
+}
+.message-box {
+  margin-top: 15px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  text-align: center;
+  width: 80%;
+  background-color: #dff0d8;
+  color: #3c763d;
+  border: 1px solid #3c763d;
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  animation: fadeInOut 4s ease-in-out forwards;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  10%, 90% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
 }

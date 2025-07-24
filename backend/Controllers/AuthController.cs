@@ -4,6 +4,9 @@ using Backend.Data;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Backend.Controllers
 {
@@ -12,18 +15,17 @@ namespace Backend.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        public AuthController(AppDbContext context) => _context = context;
+        private readonly IConfiguration _config;
+
+        public AuthController(AppDbContext context, IConfiguration config)
+        {
+            _context = context;
+            _config = config;
+        }
 
         [HttpPost("signup")]
         public async Task<IActionResult> Signup([FromBody] User newUser)
         {
-            if (string.IsNullOrWhiteSpace(newUser.FullName) ||
-                string.IsNullOrWhiteSpace(newUser.Email) ||
-                string.IsNullOrWhiteSpace(newUser.PasswordHash))
-            {
-                return BadRequest(new { message = "All fields are required" });
-            }
-
             if (await _context.Users.AnyAsync(u => u.Email == newUser.Email))
                 return BadRequest(new { message = "Email already exists" });
 
@@ -37,15 +39,9 @@ namespace Backend.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginUser)
         {
-            if (string.IsNullOrWhiteSpace(loginUser.Email) ||
-                string.IsNullOrWhiteSpace(loginUser.PasswordHash))
-            {
-                return BadRequest(new { message = "Email and password are required" });
-            }
-
-            string hashed = ComputeSha256Hash(loginUser.PasswordHash);
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == loginUser.Email && u.PasswordHash == hashed);
+            string hashedPassword = ComputeSha256Hash(loginUser.PasswordHash);
+            var user = await _context.Users.FirstOrDefaultAsync(u =>
+                u.Email == loginUser.Email && u.PasswordHash == hashedPassword);
 
             if (user == null)
                 return Unauthorized(new { message = "Invalid email or password" });
@@ -53,7 +49,8 @@ namespace Backend.Controllers
             user.LastLogin = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Login successful" });
+            string token = GenerateJwtToken(user);
+            return Ok(new { token, role = user.Role, fullName = user.FullName });
         }
 
         private static string ComputeSha256Hash(string raw)
@@ -61,6 +58,27 @@ namespace Backend.Controllers
             using var sha = SHA256.Create();
             var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
             return BitConverter.ToString(bytes).Replace("-", "").ToLower();
+        }
+
+        private string GenerateJwtToken(User user)
+        {
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.Name, user.Email),
+                new Claim(ClaimTypes.Role, user.Role)
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(2),
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }
