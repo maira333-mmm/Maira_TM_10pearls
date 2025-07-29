@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Backend.Models;
 using Backend.Data;
-using System.Security.Cryptography;
-using System.Text;
+using Backend.DTO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Backend.Controllers
 {
@@ -64,6 +65,7 @@ namespace Backend.Controllers
         {
             var claims = new[]
             {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Email),
                 new Claim(ClaimTypes.Role, user.Role)
             };

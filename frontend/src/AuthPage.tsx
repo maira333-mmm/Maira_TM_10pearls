@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './auth.css';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthData {
   email: string;
@@ -17,6 +17,7 @@ interface AuthResponse {
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
@@ -45,18 +46,16 @@ const AuthPage: React.FC = () => {
         body: JSON.stringify(data),
       });
 
-      const text = await response.text(); // body stream used here only once
+      const text = await response.text();
       let result: AuthResponse = {};
 
       try {
         result = JSON.parse(text);
       } catch {
-        result.message = text; // fallback if not valid JSON
+        result.message = text;
       }
 
-      if (!response.ok) {
-        throw new Error(result.message || "Something went wrong");
-      }
+      if (!response.ok) throw new Error(result.message || "Something went wrong");
 
       if (isLogin) {
         if (result.token) {
@@ -64,6 +63,7 @@ const AuthPage: React.FC = () => {
           localStorage.setItem("role", result.role || "");
           localStorage.setItem("fullName", result.fullName || "");
           setMessage(result.message || `Login successful as ${result.role}`);
+          setTimeout(() => navigate('/dashboard'), 1000);
         } else {
           setMessage("Login failed: No token received");
         }
@@ -81,45 +81,69 @@ const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className={`container ${!isLogin ? 'active' : ''}`}>
-      {/* Sign Up */}
-      <div className="form-container sign-up">
-        <form onSubmit={handleSubmit}>
-          <h2>Create Account</h2>
-          {!isLogin && <input type="text" name="fullName" placeholder="Full Name" required />}
-          <input type="email" name="email" placeholder="Email" required />
-          <input type="password" name="password" placeholder="Password" required />
-          <button type="submit">Sign Up</button>
-        </form>
-      </div>
+    <div className="w-screen h-screen bg-[#f8fafc] text-[#333] overflow-y-auto p-6 md:p-10 font-[Montserrat] flex items-center justify-center">
+      <div className={`relative overflow-hidden w-[768px] max-w-full min-h-[480px] bg-white rounded-[30px] shadow-[0_5px_15px_rgba(0,0,0,0.35)] transition-all duration-500 ${!isLogin ? 'active' : ''}`}>
 
-      {/* Sign In */}
-      <div className="form-container sign-in">
-        <form onSubmit={handleSubmit}>
-          <h2>Sign In</h2>
-          <input type="email" name="email" placeholder="Email" required />
-          <input type="password" name="password" placeholder="Password" required />
-          <button type="submit">Login</button>
-        </form>
-      </div>
+        {/* Sign Up Form */}
+        <div className={`absolute top-0 left-0 h-full w-1/2 z-[1] transition-all duration-500 ${!isLogin ? 'opacity-100 z-[5] translate-x-full animate-fadeIn' : 'opacity-0'}`}>
+          <form onSubmit={handleSubmit} className="bg-white flex flex-col justify-center items-center px-10 h-full">
+            <h2 className="text-2xl font-semibold mb-4">Create Account</h2>
+            {!isLogin && (
+              <input type="text" name="fullName" placeholder="Full Name" required
+                className="w-full bg-gray-200 text-black placeholder-black px-4 py-2 text-sm rounded-md mb-2 outline-none" />
+            )}
+            <input type="email" name="email" placeholder="Email" required
+              className="w-full bg-gray-200 text-black placeholder-black px-4 py-2 text-sm rounded-md mb-2 outline-none" />
+            <input type="password" name="password" placeholder="Password" required
+              className="w-full bg-gray-200 text-black placeholder-black px-4 py-2 text-sm rounded-md mb-2 outline-none" />
+            <button type="submit"
+              className="bg-[#002f34] text-[#dff0d8] uppercase text-xs py-2 px-12 mt-3 rounded-md font-semibold tracking-wide">Sign Up</button>
+          </form>
+        </div>
 
-      {/* ✅ Message Box */}
-      {message && <div className="message-box">{message}</div>}
+        {/* Sign In Form */}
+        <div className={`absolute top-0 left-0 h-full w-1/2 z-[2] transition-all duration-500 ${!isLogin ? 'translate-x-full' : ''}`}>
+          <form onSubmit={handleSubmit} className="bg-white flex flex-col justify-center items-center px-10 h-full">
+            <h2 className="text-2xl font-semibold mb-4">Sign In</h2>
+            <input type="email" name="email" placeholder="Email" required
+              className="w-full bg-gray-200 text-black placeholder-black px-4 py-2 text-sm rounded-md mb-2 outline-none" />
+            <input type="password" name="password" placeholder="Password" required
+              className="w-full bg-gray-200 text-black placeholder-black px-4 py-2 text-sm rounded-md mb-2 outline-none" />
+            <button type="submit"
+              className="bg-[#002f34] text-[#dff0d8] uppercase text-xs py-2 px-12 mt-3 rounded-md font-semibold tracking-wide">Login</button>
+          </form>
+        </div>
 
-      {/* Toggle Panel */}
-      <div className="toggle-container">
-        <div className="toggle">
-          <div className="toggle-panel toggle-left">
-            <h2>Welcome Back!</h2>
-            <p>Login with your personal info</p>
-            <button className="hidden" onClick={toggleMode}>Sign In</button>
+        {/* Message Box */}
+        {message && (
+          <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 text-center w-4/5 px-5 py-3 bg-[#dff0d8] text-[#3c763d] border border-[#3c763d] rounded-md z-[999] animate-fadeInOut text-sm font-medium">
+            {message}
           </div>
-          <div className="toggle-panel toggle-right">
-            <h2>Hello, Friend!</h2>
-            <p>Start your journey by signing up</p>
-            <button className="hidden" onClick={toggleMode}>Sign Up</button>
+        )}
+
+        {/* Toggle Container */}
+        <div className={`absolute top-0 left-1/2 h-full w-1/2 overflow-hidden transition-all duration-500 z-[1000] ${!isLogin ? 'translate-x-[-100%] rounded-r-[100px]' : 'rounded-l-[150px]'}`}>
+          <div className={`bg-[#002f34] h-full w-[200%] text-white absolute left-[-100%] flex transition-all duration-500 ${!isLogin ? 'translate-x-1/2' : ''}`}>
+
+            {/* Toggle Left Panel */}
+            <div className={`w-1/2 h-full flex flex-col justify-center items-center text-center px-6 transition-all duration-500 ${!isLogin ? 'translate-x-0' : '-translate-x-[200%]'}`}>
+              <h2 className="text-2xl font-semibold mb-2">Welcome Back!</h2>
+              <p className="text-sm mb-4">Login with your personal info</p>
+              <button onClick={toggleMode}
+                className="bg-white text-[#002f34] text-xs uppercase py-2 px-6 rounded-md font-semibold tracking-wide">Sign In</button>
+            </div>
+
+            {/* Toggle Right Panel */}
+            <div className={`w-1/2 h-full flex flex-col justify-center items-center text-center px-6 transition-all duration-500 ${!isLogin ? 'translate-x-[200%]' : 'translate-x-0'}`}>
+              <h2 className="text-2xl font-semibold mb-2">Hello, Friend!</h2>
+              <p className="text-sm mb-4">Start your journey by signing up</p>
+              <button onClick={toggleMode}
+                className="bg-white text-[#002f34] text-xs uppercase py-2 px-6 rounded-md font-semibold tracking-wide">Sign Up</button>
+            </div>
+
           </div>
         </div>
+
       </div>
     </div>
   );

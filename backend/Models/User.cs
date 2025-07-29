@@ -20,5 +20,8 @@ namespace Backend.Models
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastLogin { get; set; }
+
+        // Optional: Navigation
+        public ICollection<UserTask>? Tasks { get; set; }
     }
 }
