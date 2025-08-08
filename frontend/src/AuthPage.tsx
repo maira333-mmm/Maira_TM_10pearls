@@ -29,7 +29,7 @@ const AuthPage: React.FC = () => {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    const email = formData.get("email")?.toString().trim() || "";
+    const email = formData.get("email")?.toString().trim().toLowerCase() || "";
     const password = formData.get("password")?.toString() || "";
     const fullName = formData.get("fullName")?.toString().trim();
 
@@ -62,8 +62,15 @@ const AuthPage: React.FC = () => {
           localStorage.setItem("token", result.token);
           localStorage.setItem("role", result.role || "");
           localStorage.setItem("fullName", result.fullName || "");
+
+          // 🔥 Redirect according to role
+          if (result.role === "Admin") {
+            navigate("/admin-dashboard");
+          } else {
+            navigate("/dashboard");
+          }
+
           setMessage(result.message || `Login successful as ${result.role}`);
-          setTimeout(() => navigate('/dashboard'), 1000);
         } else {
           setMessage("Login failed: No token received");
         }

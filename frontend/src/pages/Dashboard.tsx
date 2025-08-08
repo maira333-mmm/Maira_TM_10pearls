@@ -29,7 +29,6 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-
     if (!token) {
       navigate('/login');
       return;
@@ -38,22 +37,19 @@ const Dashboard: React.FC = () => {
     const fetchData = async () => {
       try {
         const response = await axios.get('http://localhost:5146/api/dashboard/summary', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const { completed, inProgress, pending, user: userData } = response.data;
 
         setSummary({ completed, inProgress, pending });
-
         setUser({
           email: userData.email,
-          fullName: userData.fullName || localStorage.getItem('fullName') || '',
+          fullName: userData.fullName || '',
         });
       } catch (error) {
         console.error('Error fetching dashboard data', error);
-        navigate('/login');
+        navigate('/login'); // logout if token is invalid
       }
     };
 
@@ -79,6 +75,7 @@ const Dashboard: React.FC = () => {
         </div>
         <nav className="w-full">
           <ul className="w-full">
+            <li className="py-3 border-b border-white/10 text-center cursor-pointer hover:text-[#00e0e0]" onClick={() => navigate('/profile')}>Profile</li>
             <li className="py-3 border-b border-white/10 text-center cursor-pointer hover:text-[#00e0e0]" onClick={() => navigate('/dashboard')}>Dashboard</li>
             <li className="py-3 border-b border-white/10 text-center cursor-pointer hover:text-[#00e0e0]" onClick={() => navigate('/tasks')}>Task List</li>
             <li className="py-3 border-b border-white/10 text-center cursor-pointer hover:text-[#00e0e0]" onClick={() => navigate('/create')}>Create Task</li>
@@ -98,25 +95,16 @@ const Dashboard: React.FC = () => {
           <div className="flex-1 min-w-[220px] p-5 rounded-lg text-white bg-[#27ae60]">
             <h4 className="text-base mb-2">Completed Tasks</h4>
             <h2 className="text-2xl">{summary.completed}</h2>
-            <div className="bg-white/30 h-[6px] rounded mt-3">
-              <div className="bg-white h-full rounded" style={{ width: '100%' }} />
-            </div>
           </div>
 
           <div className="flex-1 min-w-[220px] p-5 rounded-lg text-white bg-[#f39c12]">
             <h4 className="text-base mb-2">In Progress Tasks</h4>
             <h2 className="text-2xl">{summary.inProgress}</h2>
-            <div className="bg-white/30 h-[6px] rounded mt-3">
-              <div className="bg-white h-full rounded" style={{ width: '60%' }} />
-            </div>
           </div>
 
           <div className="flex-1 min-w-[220px] p-5 rounded-lg text-white bg-[#8e44ad]">
             <h4 className="text-base mb-2">Pending Tasks</h4>
             <h2 className="text-2xl">{summary.pending}</h2>
-            <div className="bg-white/30 h-[6px] rounded mt-3">
-              <div className="bg-white h-full rounded" style={{ width: '30%' }} />
-            </div>
           </div>
         </div>
       </main>

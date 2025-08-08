@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-const EditTask: React.FC = () => {
+const AdminEditTask: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -18,22 +18,27 @@ const EditTask: React.FC = () => {
   useEffect(() => {
     const fetchTask = async () => {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5146/api/tasks/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      try {
+        const res = await fetch(`http://localhost:5146/api/admin/tasks/${id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-      if (res.ok) {
+        if (!res.ok) {
+          const err = await res.text();
+          setMessage(err);
+          return;
+        }
+
         const data = await res.json();
         setFormData({
-          title: data.title,
-          description: data.description,
-          dueDate: data.dueDate.split('T')[0],
-          status: data.status,
-          priority: data.priority
+          title: data.title || '',
+          description: data.description || '',
+          dueDate: data.dueDate?.split('T')[0] || '',
+          status: data.status || '',
+          priority: data.priority || ''
         });
-      } else {
-        const err = await res.text();
-        setMessage(err);
+      } catch {
+        setMessage('Failed to fetch task');
       }
     };
 
@@ -48,31 +53,35 @@ const EditTask: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
-
     const formattedDueDate = new Date(formData.dueDate).toISOString();
 
-    const response = await fetch(`http://localhost:5146/api/tasks/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ ...formData, dueDate: formattedDueDate })
-    });
+    try {
+      const response = await fetch(`http://localhost:5146/api/admin/tasks/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...formData, dueDate: formattedDueDate })
+      });
 
-    const resData = await response.json();
-    if (!response.ok) {
-      setMessage(resData.message || 'Update failed');
-    } else {
-      setMessage('Task updated successfully');
-      setTimeout(() => navigate('/dashboard'), 1200);
+      const resData = await response.json();
+
+      if (!response.ok) {
+        setMessage(resData.message || 'Update failed');
+      } else {
+        setMessage('Task updated successfully');
+        setTimeout(() => navigate('/admin-dashboard'), 1200);
+      }
+    } catch {
+      setMessage('Something went wrong while updating the task.');
     }
   };
 
   return (
     <div className="w-screen h-screen bg-[#f8fafc] text-[#333] overflow-y-auto p-10 md:p-16 font-[Segoe UI]">
       <a
-        href="/dashboard"
+        href="/admin-dashboard"
         className="inline-flex items-center text-[20px] font-bold text-[#102d3f] mb-6 hover:text-[#27ae60] transition-colors duration-300 before:content-['←'] before:mr-2 before:text-[24px]"
       >
         Back
@@ -80,10 +89,10 @@ const EditTask: React.FC = () => {
 
       <div className="mb-8">
         <h1 className="text-[32px] font-bold text-[#102d3f] relative inline-block mb-2 after:content-[''] after:absolute after:bottom-[-5px] after:left-0 after:w-[60px] after:h-[4px] after:bg-gradient-to-r after:from-[#102d3f] after:to-[#27ae60] after:rounded-md">
-          Edit Task
+          Admin Edit Task
         </h1>
         <p className="text-[16px] text-gray-500">
-          Update the details of your task
+          Admin can update task details here.
         </p>
       </div>
 
@@ -190,7 +199,7 @@ const EditTask: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/admin-dashboard')}
             className="relative px-6 py-3 text-white font-semibold text-[15px] rounded-lg min-w-[160px] bg-gradient-to-br from-[#6b7280] to-[#4b5563] shadow-md hover:-translate-y-1 transition-transform"
           >
             Cancel
@@ -201,4 +210,4 @@ const EditTask: React.FC = () => {
   );
 };
 
-export default EditTask;
+export default AdminEditTask;

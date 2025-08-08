@@ -128,7 +128,7 @@ const TaskList: React.FC = () => {
           />
 
           <button
-            onClick={() => navigate('/new-task')}
+            onClick={() => navigate('/create')}
             className="min-w-[200px] px-6 py-3 bg-gradient-to-br from-[#1a4b6d] to-[#102d3f] text-white font-semibold rounded-lg shadow-md hover:-translate-y-1 hover:shadow-xl transition-all flex items-center justify-center gap-2"
           >
             <span>+</span> Create New Task
@@ -150,7 +150,13 @@ const TaskList: React.FC = () => {
             <tbody>
               {filteredTasks.map(task => (
                 <tr key={task.id} className="transition-all hover:bg-[#f8fafc] hover:translate-x-1">
-                  <td className="px-6 py-4 text-[#374151] text-[15px]">{task.title}</td>
+                  <td
+  className="px-6 py-4 text-[#374151] text-[15px] cursor-pointer hover:underline"
+  onClick={() => navigate(`/tasks/${task.id}`)}
+>
+  {task.title}
+</td>
+
                   <td className="px-6 py-4">
                     <span className={`inline-block text-xs font-bold text-white rounded-full px-3 py-1 shadow ${
                       task.status === 'Completed'

@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Serilog;
 
 namespace Backend.Controllers
 {
@@ -24,36 +25,84 @@ namespace Backend.Controllers
             _config = config;
         }
 
+        // ✅ Signup Endpoint (Safe version: force User role)
         [HttpPost("signup")]
         public async Task<IActionResult> Signup([FromBody] User newUser)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == newUser.Email))
-                return BadRequest(new { message = "Email already exists" });
+            try
+            {
+                if (await _context.Users.AnyAsync(u => u.Email == newUser.Email))
+                {
+                    Log.Warning("Signup attempt with existing email: {Email}", newUser.Email);
+                    return BadRequest(new { message = "Email already exists" });
+                }
 
-            newUser.PasswordHash = ComputeSha256Hash(newUser.PasswordHash);
-            _context.Users.Add(newUser);
-            await _context.SaveChangesAsync();
+                newUser.PasswordHash = ComputeSha256Hash(newUser.PasswordHash);
+                newUser.Role = "User"; // ✅ Prevent role override from frontend
+                newUser.IsActive = true;
+                newUser.CreatedAt = DateTime.UtcNow;
 
-            return Ok(new { message = "Signup successful" });
+                _context.Users.Add(newUser);
+                await _context.SaveChangesAsync();
+
+                Log.Information("New user signed up successfully: {Email}", newUser.Email);
+                return Ok(new { message = "Signup successful" });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error occurred during signup");
+                return StatusCode(500, new { message = "An error occurred during signup" });
+            }
         }
 
+        // ✅ Login Endpoint
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginUser)
         {
-            string hashedPassword = ComputeSha256Hash(loginUser.PasswordHash);
-            var user = await _context.Users.FirstOrDefaultAsync(u =>
-                u.Email == loginUser.Email && u.PasswordHash == hashedPassword);
+            try
+            {
+                string hashedPassword = ComputeSha256Hash(loginUser.PasswordHash);
 
-            if (user == null)
-                return Unauthorized(new { message = "Invalid email or password" });
+                var user = await _context.Users.FirstOrDefaultAsync(u =>
+                    u.Email.ToLower() == loginUser.Email.ToLower().Trim() &&
+                    u.PasswordHash == hashedPassword);
 
-            user.LastLogin = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+                if (user == null)
+                {
+                    Log.Warning("Login failed for email: {Email}", loginUser.Email);
+                    return Unauthorized(new { message = "Invalid email or password" });
+                }
 
-            string token = GenerateJwtToken(user);
-            return Ok(new { token, role = user.Role, fullName = user.FullName });
+                // ✅ Check if account is deactivated
+                if (!user.IsActive)
+                {
+                    Log.Warning("Deactivated account tried to login: {Email}", user.Email);
+                    return Unauthorized(new { message = "Your account has been deactivated. Please contact admin." });
+                }
+
+                user.LastLogin = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                string token = GenerateJwtToken(user);
+
+                Log.Information("User logged in: {Email}", user.Email);
+                return Ok(new
+                {
+                    token,
+                    role = user.Role,
+                    fullName = user.FullName,
+                    email = user.Email,
+                    userId = user.Id
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error occurred during login for email: {Email}", loginUser.Email);
+                return StatusCode(500, new { message = "An error occurred during login" });
+            }
         }
 
+        // 🔐 Password Hashing Method
         private static string ComputeSha256Hash(string raw)
         {
             using var sha = SHA256.Create();
@@ -61,6 +110,7 @@ namespace Backend.Controllers
             return BitConverter.ToString(bytes).Replace("-", "").ToLower();
         }
 
+        // 🔐 Token Generator
         private string GenerateJwtToken(User user)
         {
             var claims = new[]
@@ -72,6 +122,7 @@ namespace Backend.Controllers
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],

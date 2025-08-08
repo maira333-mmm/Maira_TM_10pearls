@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-const EditTask: React.FC = () => {
-  const { id } = useParams();
+interface User {
+  id: number;
+  fullName: string;
+  email: string;
+}
+
+const AdminCreateTask: React.FC = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -10,69 +15,95 @@ const EditTask: React.FC = () => {
     description: '',
     dueDate: '',
     status: '',
-    priority: ''
+    priority: '',
+    userId: '',
   });
 
+  const [users, setUsers] = useState<User[]>([]);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTask = async () => {
+    const fetchUsers = async () => {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5146/api/tasks/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (!token) return;
 
-      if (res.ok) {
-        const data = await res.json();
-        setFormData({
-          title: data.title,
-          description: data.description,
-          dueDate: data.dueDate.split('T')[0],
-          status: data.status,
-          priority: data.priority
+      try {
+        const res = await fetch('http://localhost:5146/api/admin-dashboard/users', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-      } else {
-        const err = await res.text();
-        setMessage(err);
+
+        if (!res.ok) throw new Error('Failed to fetch users');
+        const data = await res.json();
+        setUsers(data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
       }
     };
 
-    fetchTask();
-  }, [id]);
+    fetchUsers();
+  }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const token = localStorage.getItem('token');
+    if (!token) {
+      setMessage("You are not logged in");
+      return;
+    }
 
     const formattedDueDate = new Date(formData.dueDate).toISOString();
 
-    const response = await fetch(`http://localhost:5146/api/tasks/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ ...formData, dueDate: formattedDueDate })
-    });
+    const dataToSend = {
+      title: formData.title,
+      description: formData.description,
+      dueDate: formattedDueDate,
+      status: formData.status,
+      priority: formData.priority,
+      userId: Number(formData.userId),
+    };
 
-    const resData = await response.json();
-    if (!response.ok) {
-      setMessage(resData.message || 'Update failed');
-    } else {
-      setMessage('Task updated successfully');
-      setTimeout(() => navigate('/dashboard'), 1200);
+    try {
+      const response = await fetch('http://localhost:5146/api/admin-dashboard/create-task', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(dataToSend),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.message || 'Something went wrong');
+
+      setMessage('Task assigned successfully!');
+      setTimeout(() => navigate('/admin-dashboard'), 1200);
+
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error details:", error.message);
+        setMessage(error.message);
+      } else {
+        console.error("Unexpected error:", error);
+        setMessage("Unexpected error");
+      }
     }
   };
 
   return (
-    <div className="w-screen h-screen bg-[#f8fafc] text-[#333] overflow-y-auto p-10 md:p-16 font-[Segoe UI]">
+    <div className="w-screen min-h-screen bg-[#f8fafc] text-[#333] p-10 md:p-16 font-[Segoe UI]">
       <a
-        href="/dashboard"
+        href="/admin-dashboard"
         className="inline-flex items-center text-[20px] font-bold text-[#102d3f] mb-6 hover:text-[#27ae60] transition-colors duration-300 before:content-['←'] before:mr-2 before:text-[24px]"
       >
         Back
@@ -80,10 +111,10 @@ const EditTask: React.FC = () => {
 
       <div className="mb-8">
         <h1 className="text-[32px] font-bold text-[#102d3f] relative inline-block mb-2 after:content-[''] after:absolute after:bottom-[-5px] after:left-0 after:w-[60px] after:h-[4px] after:bg-gradient-to-r after:from-[#102d3f] after:to-[#27ae60] after:rounded-md">
-          Edit Task
+          Assign Task to User
         </h1>
         <p className="text-[16px] text-gray-500">
-          Update the details of your task
+          Fill out the form to assign a new task to a selected user.
         </p>
       </div>
 
@@ -94,6 +125,28 @@ const EditTask: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit}>
+        {/* User Select */}
+        <div className="mb-6">
+          <label htmlFor="userId" className="block mb-2 text-[#102d3f] font-semibold text-[15px] tracking-wide">
+            Assign To User
+          </label>
+          <select
+            id="userId"
+            name="userId"
+            value={formData.userId}
+            onChange={handleChange}
+            required
+            className="w-full p-3 text-[15px] bg-white text-black border border-gray-300 rounded-lg"
+          >
+            <option value="">Select user</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.fullName} ({user.email})
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Title */}
         <div className="mb-6">
           <label htmlFor="title" className="block mb-2 text-[#102d3f] font-semibold text-[15px] tracking-wide">
@@ -105,22 +158,24 @@ const EditTask: React.FC = () => {
             name="title"
             value={formData.title}
             onChange={handleChange}
+            placeholder="Enter a descriptive task title"
             required
-            className="w-full p-3 text-[15px] bg-[#f8fafc] border border-gray-300 rounded-lg transition-all focus:outline-none focus:border-[#102d3f] focus:bg-white focus:ring-2 focus:ring-[#102d3f]/10"
+            className="w-full p-3 bg-white text-black border border-gray-300 rounded-lg"
           />
         </div>
 
         {/* Description */}
         <div className="mb-6">
           <label htmlFor="description" className="block mb-2 text-[#102d3f] font-semibold text-[15px] tracking-wide">
-            Task Description
+            Description
           </label>
           <textarea
             id="description"
             name="description"
             value={formData.description}
             onChange={handleChange}
-            className="w-full p-3 text-[15px] bg-[#f8fafc] border border-gray-300 rounded-lg h-[120px] resize-y leading-relaxed transition-all focus:outline-none focus:border-[#102d3f] focus:bg-white focus:ring-2 focus:ring-[#102d3f]/10"
+            placeholder="Task description"
+            className="w-full p-3 bg-white text-black border border-gray-300 rounded-lg"
           />
         </div>
 
@@ -136,7 +191,7 @@ const EditTask: React.FC = () => {
             value={formData.dueDate}
             onChange={handleChange}
             required
-            className="w-full p-3 text-[15px] bg-[#f8fafc] border border-gray-300 rounded-lg transition-all focus:outline-none focus:border-[#102d3f] focus:bg-white focus:ring-2 focus:ring-[#102d3f]/10"
+            className="w-full p-3 bg-white text-black border border-gray-300 rounded-lg"
           />
         </div>
 
@@ -151,11 +206,11 @@ const EditTask: React.FC = () => {
             value={formData.status}
             onChange={handleChange}
             required
-            className="w-full p-3 text-[15px] bg-[#f8fafc] border border-gray-300 rounded-lg transition-all focus:outline-none focus:border-[#102d3f] focus:bg-white focus:ring-2 focus:ring-[#102d3f]/10"
+            className="w-full p-3 bg-white text-black border border-gray-300 rounded-lg"
           >
-            <option value="">Select current status</option>
-            <option value="In Progress">In Progress</option>
+            <option value="">Select status</option>
             <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
             <option value="Completed">Completed</option>
           </select>
         </div>
@@ -171,9 +226,9 @@ const EditTask: React.FC = () => {
             value={formData.priority}
             onChange={handleChange}
             required
-            className="w-full p-3 text-[15px] bg-[#f8fafc] border border-gray-300 rounded-lg transition-all focus:outline-none focus:border-[#102d3f] focus:bg-white focus:ring-2 focus:ring-[#102d3f]/10"
+            className="w-full p-3 bg-white text-black border border-gray-300 rounded-lg"
           >
-            <option value="">Select priority level</option>
+            <option value="">Select priority</option>
             <option value="High">High</option>
             <option value="Medium">Medium</option>
             <option value="Low">Low</option>
@@ -184,14 +239,14 @@ const EditTask: React.FC = () => {
         <div className="flex flex-col md:flex-row gap-4 mt-8">
           <button
             type="submit"
-            className="relative px-6 py-3 text-white font-semibold text-[15px] rounded-lg min-w-[160px] bg-gradient-to-br from-[#1a4b6d] to-[#102d3f] shadow-md hover:-translate-y-1 transition-transform"
+            className="px-6 py-3 text-white font-semibold bg-[#102d3f] rounded-lg"
           >
-            Update Task
+            Assign Task
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
-            className="relative px-6 py-3 text-white font-semibold text-[15px] rounded-lg min-w-[160px] bg-gradient-to-br from-[#6b7280] to-[#4b5563] shadow-md hover:-translate-y-1 transition-transform"
+            onClick={() => navigate('/admin-dashboard')}
+            className="px-6 py-3 text-white font-semibold bg-gray-600 rounded-lg"
           >
             Cancel
           </button>
@@ -201,4 +256,4 @@ const EditTask: React.FC = () => {
   );
 };
 
-export default EditTask;
+export default AdminCreateTask;

@@ -1,8 +1,10 @@
 using Backend.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Net;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,17 +52,43 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Middleware order matters!
+// 🔥 Global Exception Handling Middleware
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        context.Response.ContentType = "application/json";
+
+        var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+        if (exceptionHandlerPathFeature?.Error != null)
+        {
+            Log.Error(exceptionHandlerPathFeature.Error, "Unhandled exception occurred");
+        }
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            StatusCode = context.Response.StatusCode,
+            Message = "Internal Server Error. Please try again later."
+        });
+    });
+});
+
+// Logging middleware for all requests
 app.UseSerilogRequestLogging();
+
+// CORS
 app.UseCors("AllowFrontend");
 
+// Routing and authentication
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Map controller endpoints
 app.MapControllers();
 
 app.Run();
 
+// Close Serilog
 Log.CloseAndFlush();
