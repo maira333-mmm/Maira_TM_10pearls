@@ -1,0 +1,19 @@
+﻿C:\Maira_TM_10Pearls\Backend.Tests\Controllers\AdminDashboardControllerTests.cs
+C:\Maira_TM_10Pearls\Backend.Tests\Controllers\AdminTasksControllerTests.cs
+C:\Maira_TM_10Pearls\Backend.Tests\Controllers\AuthControllerTests.cs
+C:\Maira_TM_10Pearls\Backend.Tests\Controllers\DashboardControllerTests.cs
+C:\Maira_TM_10Pearls\Backend.Tests\Controllers\TasksControllerTests.cs
+C:\Maira_TM_10Pearls\Backend.Tests\Services\TokenServiceTests.cs
+C:\Maira_TM_10Pearls\Backend.Tests\UnitTest1.cs
+C:\Users\Administrator\.nuget\packages\microsoft.net.test.sdk\17.14.1\build\net8.0\Microsoft.NET.Test.Sdk.Program.cs
+C:\Users\Administrator\.nuget\packages\microsoft.testplatform.testhost\17.14.1\build\net8.0\x64\testhost.exe
+C:\Users\Administrator\.nuget\packages\microsoft.testplatform.testhost\17.14.1\build\net8.0\x64\testhost.dll
+C:\Users\Administrator\.nuget\packages\xunit.runner.visualstudio\3.1.3\build\net8.0\xunit.abstractions.dll
+C:\Users\Administrator\.nuget\packages\xunit.runner.visualstudio\3.1.3\build\net8.0\xunit.runner.visualstudio.testadapter.dll
+C:\Maira_TM_10Pearls\Backend.Tests\Controllers\New Text Document.txt
+C:\Maira_TM_10Pearls\Backend.Tests\Controllers\sonarqubetest.png
+C:\Maira_TM_10Pearls\Backend.Tests\Controllers\sonartesting.png
+C:\Maira_TM_10Pearls\Backend.Tests\Controllers\Test.png
+C:\Maira_TM_10Pearls\Backend.Tests\Services\New Text Document.txt
+C:\Maira_TM_10Pearls\Backend.Tests\TestResults\68937389-ffda-4493-84c6-b410b7ae6620\coverage.cobertura.xml
+C:\Maira_TM_10Pearls\Backend.Tests\TestResults\fa5a1ba8-f2eb-4e33-bf96-3157e187f06c\coverage.cobertura.xml

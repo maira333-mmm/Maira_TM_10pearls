@@ -3,15 +3,22 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.DTO;
+using Backend.Models;
 using Serilog;
 
 namespace Backend.Controllers
 {
+    [ApiController]
     [Route("api/admin/tasks")]
-    [Authorize(Roles = "Admin")]
-    public class AdminTasksController : BaseTaskController
+    [Authorize(Roles = "Admin")] // ✅ Only accessible by Admins
+    public class AdminTasksController : ControllerBase
     {
-        public AdminTasksController(AppDbContext context) : base(context) { }
+        private readonly AppDbContext _context;
+
+        public AdminTasksController(AppDbContext context)
+        {
+            _context = context;
+        }
 
         // ✅ GET: api/admin/tasks/{id}
         [HttpGet("{id}")]
@@ -24,7 +31,12 @@ namespace Backend.Controllers
                     .FirstOrDefaultAsync(t => t.Id == id);
 
                 if (task == null)
+                {
+                    Log.Warning("Admin attempted to fetch non-existing task. TaskId: {TaskId}", id);
                     return NotFound(new { message = "Task not found or unauthorized" });
+                }
+
+                Log.Information("Admin fetched task details. TaskId: {TaskId}", id);
 
                 return Ok(new
                 {
@@ -39,7 +51,8 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                return HandleServerError(ex, nameof(GetTaskById));
+                Log.Error(ex, "Error fetching task details. TaskId: {TaskId}", id);
+                return StatusCode(500, new { message = "Error retrieving task", error = ex.Message });
             }
         }
 
@@ -50,11 +63,20 @@ namespace Backend.Controllers
             try
             {
                 if (!ModelState.IsValid)
+                {
+                    Log.Warning("Invalid model state while updating task. TaskId: {TaskId}", id);
                     return BadRequest(new { message = "Invalid data", errors = ModelState });
+                }
 
                 var task = await _context.UserTasks.FindAsync(id);
                 if (task == null)
+                {
+                    Log.Warning("Admin attempted to update non-existing task. TaskId: {TaskId}", id);
                     return NotFound(new { message = "Task not found or unauthorized" });
+                }
+
+                // Optionally log previous values for audit
+                Log.Information("Admin updating task. TaskId: {TaskId}, OldTitle: {OldTitle}", id, task.Title);
 
                 task.Title = dto.Title;
                 task.Description = dto.Description;
@@ -64,11 +86,27 @@ namespace Backend.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Task updated successfully by admin!", task });
+                Log.Information("Admin updated task successfully. TaskId: {TaskId}, NewTitle: {NewTitle}", id, task.Title);
+
+                return Ok(new
+                {
+                    message = "Task updated successfully by admin!",
+                    task = new
+                    {
+                        task.Id,
+                        task.Title,
+                        task.Description,
+                        task.DueDate,
+                        task.Status,
+                        task.Priority,
+                        task.UserId
+                    }
+                });
             }
             catch (Exception ex)
             {
-                return HandleServerError(ex, nameof(UpdateTaskByAdmin));
+                Log.Error(ex, "Error updating task. TaskId: {TaskId}", id);
+                return StatusCode(500, new { message = "Error updating task", error = ex.Message });
             }
         }
 
@@ -92,11 +130,14 @@ namespace Backend.Controllers
                     })
                     .ToListAsync();
 
+                Log.Information("Admin fetched all tasks. Count: {Count}", tasks.Count);
+
                 return Ok(tasks);
             }
             catch (Exception ex)
             {
-                return HandleServerError(ex, nameof(GetAllTasks));
+                Log.Error(ex, "Error fetching all tasks for admin");
+                return StatusCode(500, new { message = "Error retrieving tasks", error = ex.Message });
             }
         }
 
@@ -108,16 +149,22 @@ namespace Backend.Controllers
             {
                 var task = await _context.UserTasks.FindAsync(id);
                 if (task == null)
+                {
+                    Log.Warning("Admin attempted to delete non-existing task. TaskId: {TaskId}", id);
                     return NotFound(new { message = "Task not found" });
+                }
 
                 _context.UserTasks.Remove(task);
                 await _context.SaveChangesAsync();
+
+                Log.Information("Admin deleted task. TaskId: {TaskId}", id);
 
                 return Ok(new { message = "Task deleted successfully" });
             }
             catch (Exception ex)
             {
-                return HandleServerError(ex, nameof(DeleteTask));
+                Log.Error(ex, "Error deleting task. TaskId: {TaskId}", id);
+                return StatusCode(500, new { message = "Error deleting task", error = ex.Message });
             }
         }
     }

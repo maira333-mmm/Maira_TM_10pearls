@@ -1,0 +1,1 @@
+C:\Maira_TM_10Pearls\Backend.Tests\.sonarqube\out\1
