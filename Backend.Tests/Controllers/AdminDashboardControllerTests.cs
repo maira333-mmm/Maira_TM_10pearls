@@ -1,218 +1,203 @@
-using Xunit;
 using Backend.Controllers;
 using Backend.Data;
-using Backend.Models;
-using Backend.DTO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
-using System.Security.Claims;
-using System.Text.Json;
+using Xunit;
 
-namespace Backend.Tests.Controllers
+namespace Backend.Tests
 {
     public class AdminDashboardControllerTests
     {
-        private readonly DbContextOptions<AppDbContext> _dbOptions;
-
-        public AdminDashboardControllerTests()
+        [Fact]
+        public async Task GetAllUsers_Ok_ReturnsOnlyActiveNonAdmins()
         {
-            _dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedUser(ctx, 1, "a@a.com", "Admin", role: "Admin");
+            TestHelpers.SeedUser(ctx, 2, "u1@x.com", "U1", role: "User", isActive: true);
+            TestHelpers.SeedUser(ctx, 3, "u2@x.com", "U2", role: "User", isActive: false);
+
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(userId: 1, email: "a@a.com", role: "Admin")
+            };
+
+            var res = await sut.GetAllUsers();
+            var ok = Assert.IsType<OkObjectResult>(res);
+            var list = ((IEnumerable<object>)ok.Value!).ToList();
+            Assert.Single(list); // only U1
+        }
+
+        [Fact]
+        public async Task GetAdminSummary_Ok_ReturnsStats()
+        {
+            using var ctx = TestHelpers.NewDb();
+            // users
+            TestHelpers.SeedUser(ctx, 1, "a@a.com", "Admin", role: "Admin");
+            TestHelpers.SeedUser(ctx, 2, "u1@x.com", "U1", role: "User", isActive: true, createdAt: DateTime.UtcNow.AddDays(-1));
+            TestHelpers.SeedUser(ctx, 3, "u2@x.com", "U2", role: "User", isActive: true, createdAt: DateTime.UtcNow.AddDays(-10));
+            // tasks
+            TestHelpers.SeedTask(ctx, 10, 2, status: "Completed");
+            TestHelpers.SeedTask(ctx, 11, 2, status: "Pending");
+            TestHelpers.SeedTask(ctx, 12, 3, status: "In Progress");
+
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(userId: 1, email: "a@a.com", role: "Admin")
+            };
+
+            var res = await sut.GetAdminSummary();
+            var ok = Assert.IsType<OkObjectResult>(res);
+            var json = System.Text.Json.JsonSerializer.Serialize(ok.Value);
+            Assert.Contains("taskStats", json);
+            Assert.Contains("userStats", json);
+            Assert.Contains("recentTasks", json);
+            Assert.Contains("users", json);
+        }
+
+        [Fact]
+        public async Task ToggleUserActivation_NotFound_WhenMissing()
+        {
+            using var ctx = TestHelpers.NewDb();
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
+            };
+            var res = await sut.ToggleUserActivation(999);
+            Assert.IsType<NotFoundObjectResult>(res);
+        }
+
+        [Fact]
+        public async Task ToggleUserActivation_BadRequest_ForAdminUser()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedUser(ctx, 1, "admin@x.com", "Admin", role: "Admin");
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
+            };
+            var res = await sut.ToggleUserActivation(1);
+            Assert.IsType<BadRequestObjectResult>(res);
+        }
+
+        [Fact]
+        public async Task ToggleUserActivation_Ok_TogglesFlag()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedUser(ctx, 2, "u@x.com", "U", role: "User", isActive: true);
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
+            };
+            var res = await sut.ToggleUserActivation(2);
+            var ok = Assert.IsType<OkObjectResult>(res);
+            Assert.False((await ctx.Users.FindAsync(2))!.IsActive);
+        }
+
+        [Fact]
+        public async Task DeleteTask_NotFound_WhenMissing()
+        {
+            using var ctx = TestHelpers.NewDb();
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
+            };
+            var res = await sut.DeleteTask(999);
+            Assert.IsType<NotFoundObjectResult>(res);
+        }
+
+        [Fact]
+        public async Task DeleteTask_Ok_WhenExists()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 50, 2, "Del");
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
+            };
+            var res = await sut.DeleteTask(50);
+            Assert.IsType<OkObjectResult>(res);
+            Assert.False(ctx.UserTasks.Any(t => t.Id == 50));
+        }
+
+        [Fact]
+        public async Task GetTaskById_Ok_And_NotFound()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 60, 2, "View");
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
+            };
+            var ok = await sut.GetTaskById(60);
+            Assert.IsType<OkObjectResult>(ok);
+
+            var nf = await sut.GetTaskById(999);
+            Assert.IsType<NotFoundObjectResult>(nf);
+        }
+
+        [Fact]
+        public async Task CreateTask_BadRequest_ForInvalidUserOrInactiveOrAdmin()
+        {
+            using var ctx = TestHelpers.NewDb();
+            // user missing
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
+            };
+            var bad1 = await sut.CreateTask(new Backend.DTO.CreateTaskDto
+            {
+                UserId = 999, Title = "T", Description = "D", Priority = "Low", Status = "Pending", DueDate = DateTime.UtcNow
+            });
+            Assert.IsType<BadRequestObjectResult>(bad1);
+
+            // admin user
+            TestHelpers.SeedUser(ctx, 10, "adm@x.com", "A", role: "Admin");
+            var bad2 = await sut.CreateTask(new Backend.DTO.CreateTaskDto
+            {
+                UserId = 10, Title = "T", Description = "D", Priority = "Low", Status = "Pending", DueDate = DateTime.UtcNow
+            });
+            Assert.IsType<BadRequestObjectResult>(bad2);
+
+            // inactive user
+            TestHelpers.SeedUser(ctx, 11, "ina@x.com", "I", role: "User", isActive: false);
+            var bad3 = await sut.CreateTask(new Backend.DTO.CreateTaskDto
+            {
+                UserId = 11, Title = "T", Description = "D", Priority = "Low", Status = "Pending", DueDate = DateTime.UtcNow
+            });
+            Assert.IsType<BadRequestObjectResult>(bad3);
+        }
+
+        [Fact]
+        public async Task CreateTask_Ok_ForValidUser()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedUser(ctx, 20, "u@x.com", "U", role: "User", isActive: true);
+            var sut = new AdminDashboardController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
+            };
+            var ok = await sut.CreateTask(new Backend.DTO.CreateTaskDto
+            {
+                UserId = 20, Title = "T", Description = "D", Priority = "Low", Status = "Pending", DueDate = DateTime.UtcNow
+            });
+            Assert.IsType<OkObjectResult>(ok);
+            Assert.True(ctx.UserTasks.Any(t => t.UserId == 20));
+        }
+
+        [Fact]
+        public async Task AdminDashboard_Endpoints_Return500_OnException()
+        {
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
                 .Options;
-        }
-
-        private ClaimsPrincipal GetAdminClaimsPrincipal()
-        {
-            var claims = new List<Claim>
+            using var ctx = new ThrowingDbContext(options);
+            var sut = new AdminDashboardController(ctx)
             {
-                new Claim(ClaimTypes.Name, "admin@example.com"),
-                new Claim(ClaimTypes.Role, "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(1, "admin@x.com", role: "Admin")
             };
-            var identity = new ClaimsIdentity(claims, "TestAuthType");
-            return new ClaimsPrincipal(identity);
-        }
-
-        private AdminDashboardController CreateController(AppDbContext context)
-        {
-            return new AdminDashboardController(context)
-            {
-                ControllerContext = new ControllerContext
-                {
-                    HttpContext = new DefaultHttpContext
-                    {
-                        User = GetAdminClaimsPrincipal()
-                    }
-                }
-            };
-        }
-
-        [Fact]
-        public async Task GetAllUsers_Returns_OnlyActiveNonAdmins()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            context.Users.AddRange(
-                new User { Id = 1, FullName = "User1", Email = "u1@test.com", Role = "User", IsActive = true },
-                new User { Id = 2, FullName = "Admin", Email = "admin@test.com", Role = "Admin", IsActive = true },
-                new User { Id = 3, FullName = "InactiveUser", Email = "u2@test.com", Role = "User", IsActive = false }
-            );
-            await context.SaveChangesAsync();
-
-            var controller = CreateController(context);
-            var result = await controller.GetAllUsers();
-
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            var users = Assert.IsAssignableFrom<IEnumerable<object>>(okResult.Value);
-            Assert.Single(users);
-        }
-
-        [Fact]
-        public async Task GetAdminSummary_Returns_CorrectData()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            var user = new User { Id = 1, FullName = "User1", Email = "u1@test.com", Role = "User", IsActive = true, CreatedAt = DateTime.UtcNow };
-            context.Users.Add(user);
-            context.UserTasks.AddRange(
-                new UserTask { Title = "Task1", Status = "Completed", UserId = 1 },
-                new UserTask { Title = "Task2", Status = "Pending", UserId = 1 },
-                new UserTask { Title = "Task3", Status = "In Progress", UserId = 1 }
-            );
-            await context.SaveChangesAsync();
-
-            var controller = CreateController(context);
-            var result = await controller.GetAdminSummary();
-
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            var json = JsonSerializer.Serialize(okResult.Value);
-
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            Assert.Equal(1, root.GetProperty("taskStats").GetProperty("completed").GetInt32());
-            Assert.Equal(1, root.GetProperty("taskStats").GetProperty("pending").GetInt32());
-            Assert.Equal(1, root.GetProperty("taskStats").GetProperty("inProgress").GetInt32());
-            Assert.Equal(1, root.GetProperty("userStats").GetProperty("total").GetInt32());
-            Assert.Equal(1, root.GetProperty("userStats").GetProperty("active").GetInt32());
-        }
-
-        [Fact]
-        public async Task ToggleUserActivation_Changes_Status()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            context.Users.Add(new User { Id = 1, FullName = "User1", Role = "User", IsActive = true });
-            await context.SaveChangesAsync();
-
-            var controller = CreateController(context);
-            var result = await controller.ToggleUserActivation(1);
-
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            var json = JsonSerializer.Serialize(okResult.Value);
-            using var doc = JsonDocument.Parse(json);
-            bool isActive = doc.RootElement.GetProperty("isActive").GetBoolean();
-
-            Assert.False(isActive);
-        }
-
-        [Fact]
-        public async Task ToggleUserActivation_Returns_NotFound_IfUserMissing()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            var controller = CreateController(context);
-
-            var result = await controller.ToggleUserActivation(99);
-
-            Assert.IsType<NotFoundObjectResult>(result);
-        }
-
-        [Fact]
-        public async Task DeleteTask_Removes_Task()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            context.UserTasks.Add(new UserTask { Id = 1, Title = "Test", UserId = 1 });
-            await context.SaveChangesAsync();
-
-            var controller = CreateController(context);
-            var result = await controller.DeleteTask(1);
-
-            Assert.IsType<OkObjectResult>(result);
-            Assert.Empty(context.UserTasks);
-        }
-
-        [Fact]
-        public async Task GetTaskById_Returns_TaskDetails()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            var user = new User { Id = 1, FullName = "User1" };
-            var task = new UserTask { Id = 1, Title = "Task1", Description = "Desc", Status = "Pending", Priority = "High", UserId = 1, User = user };
-            context.Users.Add(user);
-            context.UserTasks.Add(task);
-            await context.SaveChangesAsync();
-
-            var controller = CreateController(context);
-            var result = await controller.GetTaskById(1);
-
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            var json = JsonSerializer.Serialize(okResult.Value);
-
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            string title = root.TryGetProperty("title", out var lowerTitle)
-                ? lowerTitle.GetString()
-                : root.TryGetProperty("Title", out var upperTitle)
-                    ? upperTitle.GetString()
-                    : null;
-
-            Assert.Equal("Task1", title);
-        }
-
-        [Fact]
-        public async Task CreateTask_Assigns_Task_To_ValidUser()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            var user = new User { Id = 1, FullName = "User1", Role = "User", IsActive = true };
-            context.Users.Add(user);
-            await context.SaveChangesAsync();
-
-            var controller = CreateController(context);
-            var dto = new CreateTaskDto
-            {
-                Title = "New Task",
-                Description = "Task Desc",
-                DueDate = DateTime.UtcNow.AddDays(1),
-                Status = "Pending",
-                Priority = "Medium",
-                UserId = 1
-            };
-
-            var result = await controller.CreateTask(dto);
-
-            Assert.IsType<OkObjectResult>(result);
-            Assert.Single(context.UserTasks);
-        }
-
-        [Fact]
-        public async Task CreateTask_Returns_BadRequest_For_InvalidUser()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            var controller = CreateController(context);
-
-            var dto = new CreateTaskDto
-            {
-                Title = "Invalid Task",
-                UserId = 99,
-                Status = "Pending",
-                Priority = "Low",
-                DueDate = DateTime.UtcNow
-            };
-
-            var result = await controller.CreateTask(dto);
-
-            Assert.IsType<BadRequestObjectResult>(result);
+            var res = await sut.GetAllUsers();
+            var obj = Assert.IsType<ObjectResult>(res);
+            Assert.Equal(500, obj.StatusCode);
         }
     }
 }

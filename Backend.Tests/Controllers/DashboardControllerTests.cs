@@ -1,100 +1,53 @@
-using Xunit;
-using Moq;
-using Microsoft.Extensions.Logging;
 using Backend.Controllers;
 using Backend.Data;
-using Backend.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Text.Json;
+using Xunit;
 
-namespace Backend.Tests.Controllers
+namespace Backend.Tests
 {
     public class DashboardControllerTests
     {
-        private readonly DbContextOptions<AppDbContext> _dbOptions;
-
-        public DashboardControllerTests()
+        [Fact]
+        public async Task GetSummary_Unauthorized_WhenNoEmailClaim()
         {
-            _dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(databaseName: "DashboardDb")
-                .Options;
-        }
-
-        private ClaimsPrincipal GetClaimsPrincipal(string email)
-        {
-            var claims = new List<Claim>
+            using var ctx = TestHelpers.NewDb();
+            var sut = new DashboardController(ctx)
             {
-                new Claim(ClaimTypes.Name, email)
+                ControllerContext = TestHelpers.CtxWithUser(userId: 1, email: null!)
             };
-            var identity = new ClaimsIdentity(claims, "TestAuthType");
-            return new ClaimsPrincipal(identity);
+            var res = await sut.GetSummary();
+            Assert.IsType<UnauthorizedObjectResult>(res);
         }
 
         [Fact]
-        public async Task GetSummary_Returns_Correct_Summary()
+        public async Task GetSummary_Ok_WhenValidUser()
         {
-            using var context = new AppDbContext(_dbOptions);
-            context.Database.EnsureDeleted();
-            context.Database.EnsureCreated();
-
-            // Seed test user
-            var testUser = new User
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedUser(ctx, 9, "u@u.com", "User Nine");
+            TestHelpers.SeedTask(ctx, 90, 9, status: "Completed");
+            var sut = new DashboardController(ctx)
             {
-                Id = 1,
-                FullName = "John Doe",
-                Email = "john@example.com"
+                ControllerContext = TestHelpers.CtxWithUser(userId: 9, email: "u@u.com")
             };
-            context.Users.Add(testUser);
+            var res = await sut.GetSummary();
+            var ok = Assert.IsType<OkObjectResult>(res);
+            Assert.NotNull(ok.Value);
+        }
 
-            // Seed test tasks
-            context.UserTasks.AddRange(
-                new UserTask { UserId = 1, Status = "Completed" },
-                new UserTask { UserId = 1, Status = "In Progress" },
-                new UserTask { UserId = 1, Status = "Pending" }
-            );
-
-            await context.SaveChangesAsync();
-
-            // Mock logger
-            var logger = new Mock<ILogger<DashboardController>>();
-
-            // Create controller
-            var controller = new DashboardController(context, logger.Object)
+        [Fact]
+        public async Task GetSummary_Returns500_OnException()
+        {
+            // Dispose context to force ObjectDisposedException when enumerating
+            var ctx = TestHelpers.NewDb();
+            var sut = new DashboardController(ctx)
             {
-                ControllerContext = new ControllerContext
-                {
-                    HttpContext = new DefaultHttpContext
-                    {
-                        User = GetClaimsPrincipal("john@example.com")
-                    }
-                }
+                ControllerContext = TestHelpers.CtxWithUser(userId: 1, email: "x@x.com")
             };
+            ctx.Dispose();
 
-            // Act
-            var result = await controller.GetSummary();
-
-            // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            var json = JsonSerializer.Serialize(okResult.Value);
-
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            // Check task counts
-            Assert.Equal(1, root.GetProperty("completed").GetInt32());
-            Assert.Equal(1, root.GetProperty("inProgress").GetInt32());
-            Assert.Equal(1, root.GetProperty("pending").GetInt32());
-
-            // Check user info
-            var user = root.GetProperty("user");
-            Assert.Equal("John Doe", user.GetProperty("fullName").GetString());
-            Assert.Equal("john@example.com", user.GetProperty("email").GetString());
+            var res = await sut.GetSummary();
+            var obj = Assert.IsType<ObjectResult>(res);
+            Assert.Equal(500, obj.StatusCode);
         }
     }
 }

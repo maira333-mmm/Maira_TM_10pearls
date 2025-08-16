@@ -1,109 +1,177 @@
-using Xunit;
 using Backend.Controllers;
 using Backend.Data;
 using Backend.DTO;
 using Backend.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using System.Collections.Generic;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+using Xunit;
 
-namespace Backend.Tests.Controllers
+namespace Backend.Tests
 {
     public class TasksControllerTests
     {
-        private AppDbContext GetInMemoryDbContext()
+        [Fact]
+        public async Task CreateTask_Unauthorized_WhenNoUser()
         {
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString())
-                .Options;
-
-            return new AppDbContext(options);
+            using var ctx = TestHelpers.NewDb();
+            var sut = new TasksController(ctx);
+            var res = await sut.CreateTask(new CreateTaskDto());
+            Assert.IsType<UnauthorizedObjectResult>(res);
         }
 
-        private ClaimsPrincipal GetFakeUser(int userId)
-{
-    return new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
-    {
-        new Claim("id", userId.ToString()) // match GetCurrentUserId()
-    }, "mock"));
-}
-
+        [Fact]
+        public async Task CreateTask_BadRequest_WhenModelInvalid()
+        {
+            using var ctx = TestHelpers.NewDb();
+            var sut = new TasksController(ctx)
+            {
+                ControllerContext = TestHelpers.CtxWithUser(1)
+            };
+            sut.ModelState.AddModelError("Title", "Required");
+            var res = await sut.CreateTask(new CreateTaskDto());
+            var bad = Assert.IsType<BadRequestObjectResult>(res);
+            Assert.Equal(400, bad.StatusCode);
+        }
 
         [Fact]
-        public async Task CreateTask_Creates_TaskSuccessfully()
+        public async Task CreateTask_Ok_WhenValid()
         {
-            var context = GetInMemoryDbContext();
-            var controller = new TasksController(context);
-            controller.ControllerContext = new ControllerContext
+            using var ctx = TestHelpers.NewDb();
+            var sut = new TasksController(ctx)
             {
-                HttpContext = new DefaultHttpContext
-                {
-                    User = GetFakeUser(1)
-                }
+                ControllerContext = TestHelpers.CtxWithUser(2)
             };
 
             var dto = new CreateTaskDto
             {
-                Title = "New Task",
-                Description = "Task Desc",
+                Title = "Task",
+                Description = "D",
+                DueDate = DateTime.UtcNow,
                 Status = "Pending",
-                Priority = "High",
-                DueDate = DateTime.UtcNow.AddDays(1)
+                Priority = "High"
             };
 
-            var result = await controller.CreateTask(dto);
-            var okResult = Assert.IsType<OkObjectResult>(result);
-
-            Assert.Single(context.UserTasks);
-            Assert.Equal("New Task", context.UserTasks.First().Title);
+            var res = await sut.CreateTask(dto);
+            var ok = Assert.IsType<OkObjectResult>(res);
+            Assert.Equal(200, ok.StatusCode);
+            Assert.True(await ctx.UserTasks.AnyAsync(t => t.UserId == 2 && t.Title == "Task"));
         }
 
         [Fact]
-        public async Task GetTasks_ReturnsUserSpecificTasks()
+        public async Task CreateTask_500_OnException()
         {
-            var context = GetInMemoryDbContext();
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+                .Options;
+            using var ctx = new ThrowingDbContext(options);
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
 
-            context.UserTasks.Add(new UserTask
+            var res = await sut.CreateTask(new CreateTaskDto
             {
-                Title = "User1 Task",
-                Description = "Test task",
-                DueDate = DateTime.Now.AddDays(3),
-                Status = "Pending",
-                Priority = "High",
-                UserId = 1
-            });
-            context.UserTasks.Add(new UserTask
-            {
-                Title = "User2 Task",
-                Description = "Should not return",
-                DueDate = DateTime.Now.AddDays(1),
-                Status = "Completed",
-                Priority = "Low",
-                UserId = 2
+                Title = "X", Description = "Y", DueDate = DateTime.UtcNow, Status = "Pending", Priority = "Low"
             });
 
-            await context.SaveChangesAsync();
+            var obj = Assert.IsType<ObjectResult>(res);
+            Assert.Equal(500, obj.StatusCode);
+        }
 
-            var controller = new TasksController(context);
-            controller.ControllerContext = new ControllerContext
+        [Fact]
+        public async Task GetTasks_Unauthorized_WhenNoUser()
+        {
+            using var ctx = TestHelpers.NewDb();
+            var sut = new TasksController(ctx);
+            var res = await sut.GetTasks();
+            Assert.IsType<UnauthorizedObjectResult>(res);
+        }
+
+        [Fact]
+        public async Task GetTasks_Ok_ReturnsOnlyUserTasks()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 1, 1, "A");
+            TestHelpers.SeedTask(ctx, 2, 2, "B");
+
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
+            var res = await sut.GetTasks();
+            var ok = Assert.IsType<OkObjectResult>(res);
+            var list = Assert.IsAssignableFrom<IEnumerable<UserTask>>(ok.Value);
+            Assert.All(list, t => Assert.Equal(1, t.UserId));
+        }
+
+        [Fact]
+        public async Task GetTaskById_NotFound_WhenOtherUser()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 5, 2, "Z");
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
+            var res = await sut.GetTaskById(5);
+            Assert.IsType<NotFoundObjectResult>(res);
+        }
+
+        [Fact]
+        public async Task GetTaskById_Ok_WhenOwner()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 8, 3, "Mine");
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(3) };
+            var res = await sut.GetTaskById(8);
+            Assert.IsType<OkObjectResult>(res);
+        }
+
+        [Fact]
+        public async Task UpdateTask_BadRequest_WhenModelInvalid()
+        {
+            using var ctx = TestHelpers.NewDb();
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
+            sut.ModelState.AddModelError("Title", "Required");
+            var res = await sut.UpdateTask(1, new CreateTaskDto());
+            Assert.IsType<BadRequestObjectResult>(res);
+        }
+
+        [Fact]
+        public async Task UpdateTask_NotFound_WhenNotOwner()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 11, 2, "X");
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
+            var res = await sut.UpdateTask(11, new CreateTaskDto
             {
-                HttpContext = new DefaultHttpContext
-                {
-                    User = GetFakeUser(1)
-                }
-            };
+                Title = "N", Description = "D", DueDate = DateTime.UtcNow, Status = "In Progress", Priority = "Low"
+            });
+            Assert.IsType<NotFoundObjectResult>(res);
+        }
 
-            var result = await controller.GetTasks();
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            var tasks = Assert.IsAssignableFrom<IEnumerable<UserTask>>(okResult.Value);
+        [Fact]
+        public async Task UpdateTask_Ok_WhenOwner()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 12, 4, "Old");
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(4) };
+            var res = await sut.UpdateTask(12, new CreateTaskDto
+            {
+                Title = "New", Description = "D", DueDate = DateTime.UtcNow, Status = "Completed", Priority = "High"
+            });
+            Assert.IsType<OkObjectResult>(res);
+        }
 
-            Assert.Single(tasks);
-            Assert.Equal("User1 Task", tasks.First().Title);
+        [Fact]
+        public async Task DeleteTask_NotFound_WhenNotOwner()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 13, 2, "X");
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
+            var res = await sut.DeleteTask(13);
+            Assert.IsType<NotFoundObjectResult>(res);
+        }
+
+        [Fact]
+        public async Task DeleteTask_Ok_WhenOwner()
+        {
+            using var ctx = TestHelpers.NewDb();
+            TestHelpers.SeedTask(ctx, 14, 6, "Del");
+            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(6) };
+            var res = await sut.DeleteTask(14);
+            Assert.IsType<OkObjectResult>(res);
         }
     }
 }
