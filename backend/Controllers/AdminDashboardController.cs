@@ -4,21 +4,16 @@ using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Models;
 using Backend.DTO;
-using Serilog; // ✅ Added for logging
+using Serilog;
 
 namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/admin-dashboard")]
     [Authorize(Roles = "Admin")]
-    public class AdminDashboardController : ControllerBase
+    public class AdminDashboardController : BaseDashboardController
     {
-        private readonly AppDbContext _context;
-
-        public AdminDashboardController(AppDbContext context)
-        {
-            _context = context;
-        }
+        public AdminDashboardController(AppDbContext context) : base(context) { }
 
         // ✅ Used by AdminCreateTask page to fetch user list
         [HttpGet("users")]
@@ -28,12 +23,7 @@ namespace Backend.Controllers
             {
                 var users = await _context.Users
                     .Where(u => u.Role != "Admin" && u.IsActive)
-                    .Select(u => new
-                    {
-                        u.Id,
-                        u.FullName,
-                        u.Email
-                    })
+                    .Select(u => new { u.Id, u.FullName, u.Email })
                     .ToListAsync();
 
                 Log.Information("Admin fetched all active non-admin users. Count: {Count}", users.Count);
@@ -102,25 +92,17 @@ namespace Backend.Controllers
             }
         }
 
-        // ✅ Toggle user activation (used in AdminDashboard)
+        // ✅ Toggle user activation
         [HttpPut("toggle-active/{id}")]
         public async Task<IActionResult> ToggleUserActivation(int id)
         {
             try
             {
                 var user = await _context.Users.FindAsync(id);
-
-                if (user == null)
-                {
-                    Log.Warning("Attempt to toggle activation for non-existing user ID: {Id}", id);
-                    return NotFound(new { message = "User not found" });
-                }
+                if (user == null) return NotFound(new { message = "User not found" });
 
                 if (user.Role == "Admin")
-                {
-                    Log.Warning("Attempt to change activation status for admin user ID: {Id}", id);
                     return BadRequest(new { message = "Cannot change activation status for Admin users" });
-                }
 
                 user.IsActive = !user.IsActive;
                 await _context.SaveChangesAsync();
@@ -140,18 +122,14 @@ namespace Backend.Controllers
             }
         }
 
-        // ✅ Delete Task by Admin
+        // ✅ Delete Task
         [HttpDelete("delete-task/{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
             try
             {
                 var task = await _context.UserTasks.FindAsync(id);
-                if (task == null)
-                {
-                    Log.Warning("Attempt to delete non-existing task ID: {Id}", id);
-                    return NotFound(new { message = "Task not found" });
-                }
+                if (task == null) return NotFound(new { message = "Task not found" });
 
                 _context.UserTasks.Remove(task);
                 await _context.SaveChangesAsync();
@@ -166,21 +144,14 @@ namespace Backend.Controllers
             }
         }
 
-        // ✅ Get task details for admin view
+        // ✅ Get task details
         [HttpGet("tasks/{id}")]
         public async Task<IActionResult> GetTaskById(int id)
         {
             try
             {
-                var task = await _context.UserTasks
-                    .Include(t => t.User)
-                    .FirstOrDefaultAsync(t => t.Id == id);
-
-                if (task == null)
-                {
-                    Log.Warning("Attempt to fetch non-existing task ID: {Id}", id);
-                    return NotFound(new { message = "Task not found" });
-                }
+                var task = await _context.UserTasks.Include(t => t.User).FirstOrDefaultAsync(t => t.Id == id);
+                if (task == null) return NotFound(new { message = "Task not found" });
 
                 Log.Information("Admin fetched details for task ID: {Id}", id);
                 return Ok(new
@@ -200,7 +171,7 @@ namespace Backend.Controllers
             }
         }
 
-        // ✅ Create Task by Admin (Assign to User)
+        // ✅ Create Task by Admin
         [HttpPost("create-task")]
         public async Task<IActionResult> CreateTask([FromBody] CreateTaskDto model)
         {
@@ -208,10 +179,7 @@ namespace Backend.Controllers
             {
                 var user = await _context.Users.FindAsync(model.UserId);
                 if (user == null || user.Role == "Admin" || !user.IsActive)
-                {
-                    Log.Warning("Invalid or inactive user ID: {UserId} for task creation", model.UserId);
                     return BadRequest(new { message = "Invalid or inactive user" });
-                }
 
                 var task = new UserTask
                 {
