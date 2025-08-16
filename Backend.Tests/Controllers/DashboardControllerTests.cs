@@ -49,8 +49,7 @@ namespace Backend.Tests.Controllers
             );
             await context.SaveChangesAsync();
 
-            var logger = new Mock<ILogger<DashboardController>>();
-            var controller = new DashboardController(context, logger.Object)
+            var controller = new DashboardController(context)
             {
                 ControllerContext = new ControllerContext
                 {
@@ -62,7 +61,6 @@ namespace Backend.Tests.Controllers
             };
 
             var result = await controller.GetSummary();
-
             var okResult = Assert.IsType<OkObjectResult>(result);
             var json = JsonSerializer.Serialize(okResult.Value);
             using var doc = JsonDocument.Parse(json);
@@ -75,6 +73,25 @@ namespace Backend.Tests.Controllers
             var user = root.GetProperty("user");
             Assert.Equal("John Doe", user.GetProperty("fullName").GetString());
             Assert.Equal("john@example.com", user.GetProperty("email").GetString());
+        }
+
+        [Fact]
+        public async Task GetSummary_Returns_Unauthorized_When_NoUser()
+        {
+            using var context = new AppDbContext(_dbOptions);
+            var controller = new DashboardController(context)
+            {
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = new DefaultHttpContext
+                    {
+                        User = new ClaimsPrincipal()
+                    }
+                }
+            };
+
+            var result = await controller.GetSummary();
+            Assert.IsType<UnauthorizedObjectResult>(result);
         }
     }
 }

@@ -15,17 +15,15 @@ namespace Backend.Tests.Controllers
 {
     public class TasksControllerTests
     {
-        // ✅ Creates an in-memory DbContext (no actual SQL Server needed)
         private AppDbContext GetInMemoryDbContext()
         {
             var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()) // use unique DB for each test
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options;
 
             return new AppDbContext(options);
         }
 
-        // ✅ Mocks a ClaimsPrincipal with user ID
         private ClaimsPrincipal GetFakeUser(int userId)
         {
             return new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
@@ -34,14 +32,11 @@ namespace Backend.Tests.Controllers
             }, "mock"));
         }
 
-        // ✅ Actual test method for GetTasks()
         [Fact]
         public async Task GetTasks_ReturnsUserSpecificTasks()
         {
-            // Arrange
             var context = GetInMemoryDbContext();
 
-            // Add fake tasks for user 1 and user 2
             context.UserTasks.Add(new UserTask
             {
                 Title = "User1 Task",
@@ -64,7 +59,6 @@ namespace Backend.Tests.Controllers
 
             await context.SaveChangesAsync();
 
-            // Create controller and attach fake user with ID 1
             var controller = new TasksController(context);
             controller.ControllerContext = new ControllerContext
             {
@@ -74,15 +68,41 @@ namespace Backend.Tests.Controllers
                 }
             };
 
-            // Act
             var result = await controller.GetTasks();
 
-            // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             var tasks = Assert.IsAssignableFrom<IEnumerable<UserTask>>(okResult.Value);
-            Assert.Single(tasks); // Only one task should be returned (user 1's task)
+            Assert.Single(tasks);
             Assert.Equal("User1 Task", tasks.First().Title);
+        }
+
+        [Fact]
+        public async Task CreateTask_AddsTaskSuccessfully()
+        {
+            var context = GetInMemoryDbContext();
+            var controller = new TasksController(context);
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = GetFakeUser(1)
+                }
+            };
+
+            var dto = new Backend.DTO.CreateTaskDto
+            {
+                Title = "New Task",
+                Description = "Desc",
+                Status = "Pending",
+                Priority = "High",
+                DueDate = DateTime.Now.AddDays(2)
+            };
+
+            var result = await controller.CreateTask(dto);
+            var okResult = Assert.IsType<OkObjectResult>(result);
+
+            Assert.Equal(1, context.UserTasks.Count());
+            Assert.Equal("New Task", context.UserTasks.First().Title);
         }
     }
 }
-
