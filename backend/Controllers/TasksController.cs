@@ -12,6 +12,12 @@ namespace Backend.Controllers
     [Authorize]
     public class TasksController : BaseTaskController
     {
+        private const string InvalidUserTokenMessage = "Invalid user token";
+        private const string TaskNotFoundMessage = "Task not found or unauthorized";
+        private const string TaskCreatedMessage = "Task created successfully!";
+        private const string TaskUpdatedMessage = "Task updated successfully!";
+        private const string TaskDeletedMessage = "Task deleted successfully";
+
         public TasksController(AppDbContext context) : base(context) { }
 
         // ✅ Create Task
@@ -20,12 +26,12 @@ namespace Backend.Controllers
         {
             try
             {
-                if (dto == null || !ModelState.IsValid)
+                if (!ModelState.IsValid)
                     return BadRequest(new { message = "Invalid data", errors = ModelState });
 
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return Unauthorized(new { message = "Invalid user token" });
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
 
                 var task = new UserTask
                 {
@@ -41,7 +47,7 @@ namespace Backend.Controllers
                 await _context.SaveChangesAsync();
 
                 Log.Information("Task created successfully for UserId: {UserId}", userId);
-                return Ok(new { message = "Task created successfully!" });
+                return Ok(new { message = TaskCreatedMessage });
             }
             catch (Exception ex)
             {
@@ -57,7 +63,7 @@ namespace Backend.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return Unauthorized(new { message = "Invalid user token" });
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
 
                 var tasks = await _context.UserTasks
                     .Where(t => t.UserId == userId)
@@ -81,7 +87,7 @@ namespace Backend.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return Unauthorized(new { message = "Invalid user token" });
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
 
                 var task = await _context.UserTasks
                     .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
@@ -89,7 +95,7 @@ namespace Backend.Controllers
                 if (task == null)
                 {
                     Log.Warning("Task not found or unauthorized. TaskId: {TaskId}, UserId: {UserId}", id, userId);
-                    return NotFound(new { message = "Task not found or unauthorized" });
+                    return NotFound(new { message = TaskNotFoundMessage });
                 }
 
                 return Ok(task);
@@ -106,18 +112,18 @@ namespace Backend.Controllers
         {
             try
             {
-                if (dto == null || !ModelState.IsValid)
+                if (!ModelState.IsValid)
                     return BadRequest(new { message = "Invalid data", errors = ModelState });
 
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return Unauthorized(new { message = "Invalid user token" });
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
 
                 var task = await _context.UserTasks
                     .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
 
                 if (task == null)
-                    return NotFound(new { message = "Task not found or unauthorized" });
+                    return NotFound(new { message = TaskNotFoundMessage });
 
                 task.Title = dto.Title;
                 task.Description = dto.Description;
@@ -128,7 +134,7 @@ namespace Backend.Controllers
                 await _context.SaveChangesAsync();
                 Log.Information("Task {TaskId} updated by UserId {UserId}", id, userId);
 
-                return Ok(new { message = "Task updated successfully!" });
+                return Ok(new { message = TaskUpdatedMessage });
             }
             catch (Exception ex)
             {
@@ -144,19 +150,19 @@ namespace Backend.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return Unauthorized(new { message = "Invalid user token" });
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
 
                 var task = await _context.UserTasks
                     .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
 
                 if (task == null)
-                    return NotFound(new { message = "Task not found or unauthorized" });
+                    return NotFound(new { message = TaskNotFoundMessage });
 
                 _context.UserTasks.Remove(task);
                 await _context.SaveChangesAsync();
 
                 Log.Information("Task {TaskId} deleted by UserId {UserId}", id, userId);
-                return Ok(new { message = "Task deleted successfully" });
+                return Ok(new { message = TaskDeletedMessage });
             }
             catch (Exception ex)
             {
