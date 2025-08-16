@@ -20,6 +20,9 @@ namespace Backend.Controllers
         {
             try
             {
+                if (dto == null || !ModelState.IsValid)
+                    return BadRequest(new { message = "Invalid data", errors = ModelState });
+
                 var userId = GetCurrentUserId();
                 if (userId == null)
                     return Unauthorized(new { message = "Invalid user token" });
@@ -103,6 +106,9 @@ namespace Backend.Controllers
         {
             try
             {
+                if (dto == null || !ModelState.IsValid)
+                    return BadRequest(new { message = "Invalid data", errors = ModelState });
+
                 var userId = GetCurrentUserId();
                 if (userId == null)
                     return Unauthorized(new { message = "Invalid user token" });

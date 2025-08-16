@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Backend.Data;
 using System.Security.Claims;
+using Serilog;
 
 namespace Backend.Controllers
 {
@@ -27,7 +28,8 @@ namespace Backend.Controllers
 
         protected IActionResult HandleServerError(Exception ex, string methodName)
         {
-            Serilog.Log.Error(ex, $"Error in {methodName}");
+            // Fixed: Use Serilog message template instead of string interpolation
+            Log.Error(ex, "Error in {MethodName}", methodName);
             return StatusCode(500, new { message = "An internal server error occurred" });
         }
     }

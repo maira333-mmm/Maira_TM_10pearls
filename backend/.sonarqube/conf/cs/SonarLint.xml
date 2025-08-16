@@ -3,7 +3,7 @@
   <Settings>
     <Setting>
       <Key>sonar.cs.opencover.reportsPaths</Key>
-      <Value>C:\Maira_TM_10Pearls\Backend.Tests\TestResults\coverage.cobertura.xml</Value>
+      <Value>C:\Maira_TM_10Pearls\Backend.Tests\TestResults\d2b9bee4-2e3c-46ca-8c7d-be70d7f78646\coverage.cobertura.xml</Value>
     </Setting>
     <Setting>
       <Key>sonar.cs.ignoreHeaderComments</Key>

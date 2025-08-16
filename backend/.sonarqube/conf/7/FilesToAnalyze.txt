@@ -57,6 +57,7 @@ C:\Maira_TM_10Pearls\Backend\Logs\log-20250806.txt
 C:\Maira_TM_10Pearls\Backend\Logs\log-20250807.txt
 C:\Maira_TM_10Pearls\Backend\Logs\log-20250808.txt
 C:\Maira_TM_10Pearls\Backend\Logs\log-20250816.txt
+C:\Maira_TM_10Pearls\Backend\Logs\log-20250817.txt
 C:\Maira_TM_10Pearls\Backend\Models\New Text Document.txt
 C:\Maira_TM_10Pearls\Backend\replay_pid11144.log
 C:\Maira_TM_10Pearls\Backend\replay_pid15008.log

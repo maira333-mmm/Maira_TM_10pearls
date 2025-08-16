@@ -85,9 +85,10 @@ namespace Backend.Tests.Controllers
 
             var controller = CreateController(context);
             var result = await controller.GetAdminSummary();
-            var okResult = Assert.IsType<OkObjectResult>(result);
 
+            var okResult = Assert.IsType<OkObjectResult>(result);
             var json = JsonSerializer.Serialize(okResult.Value);
+
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
@@ -107,13 +108,24 @@ namespace Backend.Tests.Controllers
 
             var controller = CreateController(context);
             var result = await controller.ToggleUserActivation(1);
-            var okResult = Assert.IsType<OkObjectResult>(result);
 
+            var okResult = Assert.IsType<OkObjectResult>(result);
             var json = JsonSerializer.Serialize(okResult.Value);
             using var doc = JsonDocument.Parse(json);
             bool isActive = doc.RootElement.GetProperty("isActive").GetBoolean();
 
             Assert.False(isActive);
+        }
+
+        [Fact]
+        public async Task ToggleUserActivation_Returns_NotFound_IfUserMissing()
+        {
+            using var context = new AppDbContext(_dbOptions);
+            var controller = CreateController(context);
+
+            var result = await controller.ToggleUserActivation(99);
+
+            Assert.IsType<NotFoundObjectResult>(result);
         }
 
         [Fact]
@@ -128,6 +140,34 @@ namespace Backend.Tests.Controllers
 
             Assert.IsType<OkObjectResult>(result);
             Assert.Empty(context.UserTasks);
+        }
+
+        [Fact]
+        public async Task GetTaskById_Returns_TaskDetails()
+        {
+            using var context = new AppDbContext(_dbOptions);
+            var user = new User { Id = 1, FullName = "User1" };
+            var task = new UserTask { Id = 1, Title = "Task1", Description = "Desc", Status = "Pending", Priority = "High", UserId = 1, User = user };
+            context.Users.Add(user);
+            context.UserTasks.Add(task);
+            await context.SaveChangesAsync();
+
+            var controller = CreateController(context);
+            var result = await controller.GetTaskById(1);
+
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var json = JsonSerializer.Serialize(okResult.Value);
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            string title = root.TryGetProperty("title", out var lowerTitle)
+                ? lowerTitle.GetString()
+                : root.TryGetProperty("Title", out var upperTitle)
+                    ? upperTitle.GetString()
+                    : null;
+
+            Assert.Equal("Task1", title);
         }
 
         [Fact]
@@ -150,8 +190,29 @@ namespace Backend.Tests.Controllers
             };
 
             var result = await controller.CreateTask(dto);
+
             Assert.IsType<OkObjectResult>(result);
             Assert.Single(context.UserTasks);
+        }
+
+        [Fact]
+        public async Task CreateTask_Returns_BadRequest_For_InvalidUser()
+        {
+            using var context = new AppDbContext(_dbOptions);
+            var controller = CreateController(context);
+
+            var dto = new CreateTaskDto
+            {
+                Title = "Invalid Task",
+                UserId = 99,
+                Status = "Pending",
+                Priority = "Low",
+                DueDate = DateTime.UtcNow
+            };
+
+            var result = await controller.CreateTask(dto);
+
+            Assert.IsType<BadRequestObjectResult>(result);
         }
     }
 }

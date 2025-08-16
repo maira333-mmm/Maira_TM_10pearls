@@ -13,7 +13,7 @@ namespace Backend.Controllers
     {
         public AdminTasksController(AppDbContext context) : base(context) { }
 
-        // ✅ GET: api/admin/tasks/{id}
+        // GET: api/admin/tasks/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTaskById(int id)
         {
@@ -34,44 +34,17 @@ namespace Backend.Controllers
                     task.DueDate,
                     task.Status,
                     task.Priority,
-                    AssignedTo = task.User?.FullName ?? "Unassigned"
+                    AssignedTo = task.User != null ? task.User.FullName : "Unassigned"
                 });
             }
             catch (Exception ex)
             {
-                return HandleServerError(ex, nameof(GetTaskById));
+                Log.Error(ex, "Error in {ActionName}", nameof(GetTaskById));
+                return StatusCode(500, new { message = "Server error occurred" });
             }
         }
 
-        // ✅ PUT: api/admin/tasks/{id}
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTaskByAdmin(int id, [FromBody] CreateTaskDto dto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return BadRequest(new { message = "Invalid data", errors = ModelState });
-
-                var task = await _context.UserTasks.FindAsync(id);
-                if (task == null)
-                    return NotFound(new { message = "Task not found or unauthorized" });
-
-                task.Title = dto.Title;
-                task.Description = dto.Description;
-                task.DueDate = dto.DueDate;
-                task.Status = dto.Status;
-                task.Priority = dto.Priority;
-
-                await _context.SaveChangesAsync();
-                return Ok(new { message = "Task updated successfully by admin!", task });
-            }
-            catch (Exception ex)
-            {
-                return HandleServerError(ex, nameof(UpdateTaskByAdmin));
-            }
-        }
-
-        // ✅ GET: api/admin/tasks
+        // GET: api/admin/tasks
         [HttpGet]
         public async Task<IActionResult> GetAllTasks()
         {
@@ -87,7 +60,7 @@ namespace Backend.Controllers
                         t.DueDate,
                         t.Status,
                         t.Priority,
-                        AssignedTo = t.User.FullName
+                        AssignedTo = t.User != null ? t.User.FullName : "Unassigned"
                     })
                     .ToListAsync();
 
@@ -95,18 +68,50 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                return HandleServerError(ex, nameof(GetAllTasks));
+                Log.Error(ex, "Error in {ActionName}", nameof(GetAllTasks));
+                return StatusCode(500, new { message = "Server error occurred" });
             }
         }
 
-        // ✅ DELETE: api/admin/tasks/{id}
+        // PUT: api/admin/tasks/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTaskByAdmin(int id, [FromBody] CreateTaskDto dto)
+        {
+            try
+            {
+                if (dto == null || !ModelState.IsValid)
+                    return BadRequest(new { message = "Invalid data", errors = ModelState });
+
+                var task = await _context.UserTasks.FindAsync(id);
+                if (task == null)
+                    return NotFound(new { message = "Task not found or unauthorized" });
+
+                task.Title = dto.Title;
+                task.Description = dto.Description;
+                task.DueDate = dto.DueDate;
+                task.Status = dto.Status;
+                task.Priority = dto.Priority;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Task updated successfully by admin!", task });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error in {ActionName}", nameof(UpdateTaskByAdmin));
+                return StatusCode(500, new { message = "Server error occurred" });
+            }
+        }
+
+        // DELETE: api/admin/tasks/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
             try
             {
                 var task = await _context.UserTasks.FindAsync(id);
-                if (task == null) return NotFound(new { message = "Task not found" });
+                if (task == null)
+                    return NotFound(new { message = "Task not found" });
 
                 _context.UserTasks.Remove(task);
                 await _context.SaveChangesAsync();
@@ -115,7 +120,8 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
-                return HandleServerError(ex, nameof(DeleteTask));
+                Log.Error(ex, "Error in {ActionName}", nameof(DeleteTask));
+                return StatusCode(500, new { message = "Server error occurred" });
             }
         }
     }

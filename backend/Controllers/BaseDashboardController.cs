@@ -17,8 +17,9 @@ namespace Backend.Controllers
 
         /// <summary>
         /// Fetches dashboard summary for a given userId.
+        /// Returns null if user not found.
         /// </summary>
-        protected async Task<object> GetUserSummaryAsync(int userId)
+        protected async Task<object?> GetUserSummaryAsync(int userId)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) return null;
@@ -35,7 +36,7 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Extracts current user from JWT claims.
+        /// Extracts current user from JWT claims and returns nullable dashboard summary.
         /// </summary>
         protected async Task<object?> GetCurrentUserSummaryAsync()
         {
