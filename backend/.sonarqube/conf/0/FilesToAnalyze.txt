@@ -1,8 +1,6 @@
 ﻿C:\Maira_TM_10Pearls\Backend\Controllers\AdminDashboardController.cs
 C:\Maira_TM_10Pearls\Backend\Controllers\AdminTasksController.cs
 C:\Maira_TM_10Pearls\Backend\Controllers\AuthController.cs
-C:\Maira_TM_10Pearls\Backend\Controllers\BaseDashboardController.cs
-C:\Maira_TM_10Pearls\Backend\Controllers\BaseTaskController.cs
 C:\Maira_TM_10Pearls\Backend\Controllers\DasboardController.cs
 C:\Maira_TM_10Pearls\Backend\Controllers\TasksController.cs
 C:\Maira_TM_10Pearls\Backend\Data\AppDbContext.cs

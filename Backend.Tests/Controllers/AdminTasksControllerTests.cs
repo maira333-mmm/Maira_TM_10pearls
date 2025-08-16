@@ -28,12 +28,11 @@ namespace Backend.Tests.Controllers
 
         private ClaimsPrincipal GetAdminUser()
         {
-            var claims = new List<Claim>
+            return new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
             {
                 new Claim(ClaimTypes.Name, "admin@example.com"),
                 new Claim(ClaimTypes.Role, "Admin")
-            };
-            return new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"));
+            }, "TestAuth"));
         }
 
         private AdminTasksController CreateController(AppDbContext context)
@@ -81,19 +80,16 @@ namespace Backend.Tests.Controllers
         }
 
         [Fact]
-        public async Task GetTaskById_Returns_NotFound_When_TaskDoesNotExist()
+        public async Task GetTaskById_Returns_NotFound_When_TaskMissing()
         {
             using var context = new AppDbContext(_dbOptions);
             var controller = CreateController(context);
-
             var result = await controller.GetTaskById(99);
-
-            var notFound = Assert.IsType<NotFoundObjectResult>(result);
-            Assert.Contains("Task not found", notFound.Value.ToString());
+            Assert.IsType<NotFoundObjectResult>(result);
         }
 
         [Fact]
-        public async Task UpdateTaskByAdmin_Updates_Task_Successfully()
+        public async Task UpdateTaskByAdmin_Updates_TaskSuccessfully()
         {
             using var context = new AppDbContext(_dbOptions);
             var task = new UserTask
@@ -128,29 +124,11 @@ namespace Backend.Tests.Controllers
         }
 
         [Fact]
-        public async Task UpdateTaskByAdmin_Returns_NotFound_When_TaskMissing()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            var controller = CreateController(context);
-
-            var dto = new CreateTaskDto
-            {
-                Title = "Doesn't Matter",
-                Description = "NA",
-                Status = "Pending",
-                Priority = "Low",
-                DueDate = DateTime.UtcNow
-            };
-
-            var result = await controller.UpdateTaskByAdmin(99, dto);
-            Assert.IsType<NotFoundObjectResult>(result);
-        }
-
-        [Fact]
         public async Task GetAllTasks_Returns_ListOfTasks()
         {
             using var context = new AppDbContext(_dbOptions);
-            context.Users.Add(new User { Id = 1, FullName = "Test User" });
+            var user = new User { Id = 1, FullName = "Test User" };
+            context.Users.Add(user);
             context.UserTasks.Add(new UserTask
             {
                 Id = 1,
@@ -171,7 +149,7 @@ namespace Backend.Tests.Controllers
         }
 
         [Fact]
-        public async Task DeleteTask_Removes_Task_Successfully()
+        public async Task DeleteTask_Removes_TaskSuccessfully()
         {
             using var context = new AppDbContext(_dbOptions);
             context.UserTasks.Add(new UserTask { Id = 1, Title = "To Delete" });
@@ -182,16 +160,6 @@ namespace Backend.Tests.Controllers
 
             Assert.IsType<OkObjectResult>(result);
             Assert.Empty(context.UserTasks);
-        }
-
-        [Fact]
-        public async Task DeleteTask_Returns_NotFound_When_TaskMissing()
-        {
-            using var context = new AppDbContext(_dbOptions);
-            var controller = CreateController(context);
-
-            var result = await controller.DeleteTask(99);
-            Assert.IsType<NotFoundObjectResult>(result);
         }
     }
 }

@@ -1,68 +1,34 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Backend.Data;
-using System.Security.Claims;
-using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/dashboard")]
-    public class DashboardController : ControllerBase
+    [Authorize]
+    public class DashboardController : BaseDashboardController
     {
-        private readonly AppDbContext _context;
-        private readonly ILogger<DashboardController> _logger;
+        public DashboardController(AppDbContext context) : base(context) { }
 
-        public DashboardController(AppDbContext context, ILogger<DashboardController> logger)
-        {
-            _context = context;
-            _logger = logger;
-        }
-
-        // ✅ Dashboard Summary for Logged-in User
         [HttpGet("summary")]
-        [Authorize]
         public async Task<IActionResult> GetSummary()
         {
             try
             {
-                var email = User.FindFirstValue(ClaimTypes.Name);
-                if (string.IsNullOrEmpty(email))
+                var summary = await GetCurrentUserSummaryAsync();
+                if (summary == null)
                 {
-                    _logger.LogWarning("Token received without email claim.");
-                    return Unauthorized("Invalid token");
+                    return Unauthorized(new { message = "Invalid or unauthorized user" });
                 }
 
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-                if (user == null)
-                {
-                    _logger.LogWarning("User not found for email: {Email}", email);
-                    return Unauthorized("User not found");
-                }
-
-                _logger.LogInformation("Fetching dashboard summary for user {UserId}", user.Id);
-
-                var userTasks = _context.UserTasks.Where(t => t.UserId == user.Id);
-
-                var summary = new
-                {
-                    completed = await userTasks.CountAsync(t => t.Status == "Completed"),
-                    inProgress = await userTasks.CountAsync(t => t.Status == "In Progress"),
-                    pending = await userTasks.CountAsync(t => t.Status == "Pending"),
-                    user = new
-                    {
-                        fullName = user.FullName,
-                        email = user.Email
-                    }
-                };
-
-                _logger.LogInformation("Summary fetched successfully for user {UserId}", user.Id);
+                Log.Information("Summary fetched successfully for normal user.");
                 return Ok(summary);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching dashboard summary");
+                Log.Error(ex, "Error fetching dashboard summary");
                 return StatusCode(500, new { message = "An error occurred while fetching summary" });
             }
         }

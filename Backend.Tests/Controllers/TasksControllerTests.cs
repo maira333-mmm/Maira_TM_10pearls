@@ -1,47 +1,73 @@
 using Xunit;
 using Backend.Controllers;
 using Backend.Data;
+using Backend.DTO;
 using Backend.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Backend.Tests.Controllers
 {
     public class TasksControllerTests
     {
-        // ✅ Creates an in-memory DbContext (no actual SQL Server needed)
         private AppDbContext GetInMemoryDbContext()
         {
             var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()) // use unique DB for each test
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
             return new AppDbContext(options);
         }
 
-        // ✅ Mocks a ClaimsPrincipal with user ID
         private ClaimsPrincipal GetFakeUser(int userId)
+{
+    return new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+    {
+        new Claim("id", userId.ToString()) // match GetCurrentUserId()
+    }, "mock"));
+}
+
+
+        [Fact]
+        public async Task CreateTask_Creates_TaskSuccessfully()
         {
-            return new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            var context = GetInMemoryDbContext();
+            var controller = new TasksController(context);
+            controller.ControllerContext = new ControllerContext
             {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString())
-            }, "mock"));
+                HttpContext = new DefaultHttpContext
+                {
+                    User = GetFakeUser(1)
+                }
+            };
+
+            var dto = new CreateTaskDto
+            {
+                Title = "New Task",
+                Description = "Task Desc",
+                Status = "Pending",
+                Priority = "High",
+                DueDate = DateTime.UtcNow.AddDays(1)
+            };
+
+            var result = await controller.CreateTask(dto);
+            var okResult = Assert.IsType<OkObjectResult>(result);
+
+            Assert.Single(context.UserTasks);
+            Assert.Equal("New Task", context.UserTasks.First().Title);
         }
 
-        // ✅ Actual test method for GetTasks()
         [Fact]
         public async Task GetTasks_ReturnsUserSpecificTasks()
         {
-            // Arrange
             var context = GetInMemoryDbContext();
 
-            // Add fake tasks for user 1 and user 2
             context.UserTasks.Add(new UserTask
             {
                 Title = "User1 Task",
@@ -51,7 +77,6 @@ namespace Backend.Tests.Controllers
                 Priority = "High",
                 UserId = 1
             });
-
             context.UserTasks.Add(new UserTask
             {
                 Title = "User2 Task",
@@ -64,7 +89,6 @@ namespace Backend.Tests.Controllers
 
             await context.SaveChangesAsync();
 
-            // Create controller and attach fake user with ID 1
             var controller = new TasksController(context);
             controller.ControllerContext = new ControllerContext
             {
@@ -74,15 +98,12 @@ namespace Backend.Tests.Controllers
                 }
             };
 
-            // Act
             var result = await controller.GetTasks();
-
-            // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
             var tasks = Assert.IsAssignableFrom<IEnumerable<UserTask>>(okResult.Value);
-            Assert.Single(tasks); // Only one task should be returned (user 1's task)
+
+            Assert.Single(tasks);
             Assert.Equal("User1 Task", tasks.First().Title);
         }
     }
 }
-

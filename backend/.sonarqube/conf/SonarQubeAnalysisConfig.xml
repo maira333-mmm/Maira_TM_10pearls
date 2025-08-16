@@ -148,8 +148,8 @@
   </ServerSettings>
   <LocalSettings>
     <Property Name="sonar.host.url">http://localhost:9000</Property>
-    <Property Name="sonar.cs.opencover.reportsPaths">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\68937389-ffda-4493-84c6-b410b7ae6620\coverage.cobertura.xml</Property>
-    <Property Name="sonar.exclusions">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\68937389-ffda-4493-84c6-b410b7ae6620\coverage.cobertura.xml</Property>
+    <Property Name="sonar.cs.opencover.reportsPaths">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\coverage.cobertura.xml</Property>
+    <Property Name="sonar.exclusions">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\coverage.cobertura.xml</Property>
   </LocalSettings>
   <ScannerOptsSettings />
   <AnalyzersSettings>
