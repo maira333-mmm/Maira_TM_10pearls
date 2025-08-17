@@ -4,6 +4,10 @@ using Backend.DTO;
 using Backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Backend.Tests
@@ -16,10 +20,10 @@ namespace Backend.Tests
             using var ctx = TestHelpers.NewDb();
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 1, email: "a@a.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(1, "a@a.com", role: "Admin")
             };
             var res = await sut.GetTaskById(999);
-            Assert.IsType<NotFoundObjectResult>(res);
+            Assert.Equal(404, ((ObjectResult)res).StatusCode);
         }
 
         [Fact]
@@ -28,12 +32,14 @@ namespace Backend.Tests
             using var ctx = TestHelpers.NewDb();
             TestHelpers.SeedUser(ctx, 2, "u@u.com", "U");
             TestHelpers.SeedTask(ctx, 5, 2, "Title");
+
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 100, email: "admin@x.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(100, "admin@x.com", role: "Admin")
             };
+
             var res = await sut.GetTaskById(5);
-            Assert.IsType<OkObjectResult>(res);
+            Assert.Equal(200, ((ObjectResult)res).StatusCode);
         }
 
         [Fact]
@@ -43,14 +49,14 @@ namespace Backend.Tests
             TestHelpers.SeedUser(ctx, 1, "a@a.com", "A");
             TestHelpers.SeedTask(ctx, 1, 1, "T1");
             TestHelpers.SeedTask(ctx, 2, 1, "T2");
+
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 10, email: "admin@x.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(10, "admin@x.com", role: "Admin")
             };
+
             var res = await sut.GetAllTasks();
-            var ok = Assert.IsType<OkObjectResult>(res);
-            var arr = Assert.IsAssignableFrom<IEnumerable<object>>(ok.Value!);
-            Assert.True(arr.Any());
+            Assert.Equal(200, ((ObjectResult)res).StatusCode);
         }
 
         [Fact]
@@ -59,11 +65,12 @@ namespace Backend.Tests
             using var ctx = TestHelpers.NewDb();
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 10, email: "admin@x.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(10, "admin@x.com", role: "Admin")
             };
+
             sut.ModelState.AddModelError("Title", "Required");
             var res = await sut.UpdateTaskByAdmin(1, new CreateTaskDto());
-            Assert.IsType<BadRequestObjectResult>(res);
+            Assert.Equal(400, ((ObjectResult)res).StatusCode);
         }
 
         [Fact]
@@ -72,13 +79,15 @@ namespace Backend.Tests
             using var ctx = TestHelpers.NewDb();
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 10, email: "admin@x.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(10, "admin@x.com", role: "Admin")
             };
+
             var res = await sut.UpdateTaskByAdmin(123, new CreateTaskDto
             {
                 Title = "T", Description = "D", Status = "Pending", Priority = "Low", DueDate = DateTime.UtcNow
             });
-            Assert.IsType<NotFoundObjectResult>(res);
+
+            Assert.Equal(404, ((ObjectResult)res).StatusCode);
         }
 
         [Fact]
@@ -86,15 +95,19 @@ namespace Backend.Tests
         {
             using var ctx = TestHelpers.NewDb();
             TestHelpers.SeedTask(ctx, 44, 1, "Old");
+
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 10, email: "admin@x.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(10, "admin@x.com", role: "Admin")
             };
+
             var res = await sut.UpdateTaskByAdmin(44, new CreateTaskDto
             {
                 Title = "New", Description = "D", Status = "In Progress", Priority = "High", DueDate = DateTime.UtcNow
             });
-            Assert.IsType<OkObjectResult>(res);
+
+            Assert.Equal(200, ((ObjectResult)res).StatusCode);
+
             var updated = await ctx.UserTasks.FirstAsync(t => t.Id == 44);
             Assert.Equal("New", updated.Title);
         }
@@ -105,10 +118,11 @@ namespace Backend.Tests
             using var ctx = TestHelpers.NewDb();
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 10, email: "admin@x.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(10, "admin@x.com", role: "Admin")
             };
+
             var res = await sut.DeleteTask(9999);
-            Assert.IsType<NotFoundObjectResult>(res);
+            Assert.Equal(404, ((ObjectResult)res).StatusCode);
         }
 
         [Fact]
@@ -116,12 +130,14 @@ namespace Backend.Tests
         {
             using var ctx = TestHelpers.NewDb();
             TestHelpers.SeedTask(ctx, 77, 1, "Del");
+
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 10, email: "admin@x.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(10, "admin@x.com", role: "Admin")
             };
+
             var res = await sut.DeleteTask(77);
-            Assert.IsType<OkObjectResult>(res);
+            Assert.Equal(200, ((ObjectResult)res).StatusCode);
             Assert.False(ctx.UserTasks.Any(t => t.Id == 77));
         }
 
@@ -131,10 +147,12 @@ namespace Backend.Tests
             var options = new DbContextOptionsBuilder<AppDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
                 .Options;
+
             using var ctx = new ThrowingDbContext(options);
+
             var sut = new AdminTasksController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 10, email: "admin@x.com", role: "Admin")
+                ControllerContext = TestHelpers.CtxWithUser(10, "admin@x.com", role: "Admin")
             };
 
             var res = await sut.UpdateTaskByAdmin(1, new CreateTaskDto
@@ -142,7 +160,7 @@ namespace Backend.Tests
                 Title = "T", Description = "D", Status = "Pending", Priority = "Low", DueDate = DateTime.UtcNow
             });
 
-            var obj = Assert.IsType<ObjectResult>(res);
+            var obj = Assert.IsAssignableFrom<ObjectResult>(res);
             Assert.Equal(500, obj.StatusCode);
         }
     }

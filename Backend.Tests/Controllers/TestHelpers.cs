@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
+using System;
+using System.Collections.Generic;
 
 namespace Backend.Tests
 {
@@ -71,11 +75,15 @@ namespace Backend.Tests
         }
     }
 
-    // Forces SaveChangesAsync to throw to hit catch blocks returning 500
+    // Forces SaveChangesAsync to throw to test 500 responses
     public class ThrowingDbContext : AppDbContext
     {
         public ThrowingDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("boom");
+
+        public override int SaveChanges()
             => throw new InvalidOperationException("boom");
     }
 }

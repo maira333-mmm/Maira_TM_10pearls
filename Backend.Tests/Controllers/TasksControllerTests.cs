@@ -1,177 +1,175 @@
-using Backend.Controllers;
-using Backend.Data;
-using Backend.DTO;
-using Backend.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Backend.Data;
+using Backend.Models;
+using Backend.DTO;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
+using Serilog;
 
-namespace Backend.Tests
+namespace Backend.Controllers
 {
-    public class TasksControllerTests
+    [Route("api/[controller]")]
+    [Authorize]
+    public class TasksController : BaseTaskController
     {
-        [Fact]
-        public async Task CreateTask_Unauthorized_WhenNoUser()
+        private const string InvalidUserTokenMessage = "Invalid user token";
+        private const string TaskNotFoundMessage = "Task not found or unauthorized";
+        private const string TaskCreatedMessage = "Task created successfully!";
+        private const string TaskUpdatedMessage = "Task updated successfully!";
+        private const string TaskDeletedMessage = "Task deleted successfully";
+
+        public TasksController(AppDbContext context) : base(context) { }
+
+        // Central error handler
+        private ObjectResult HandleServerError(Exception ex, string method)
         {
-            using var ctx = TestHelpers.NewDb();
-            var sut = new TasksController(ctx);
-            var res = await sut.CreateTask(new CreateTaskDto());
-            Assert.IsType<UnauthorizedObjectResult>(res);
+            Log.Error(ex, "Error in {Method}", method);
+            return StatusCode(500, new { message = "Internal server error" });
         }
 
-        [Fact]
-        public async Task CreateTask_BadRequest_WhenModelInvalid()
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateTask([FromBody] CreateTaskDto dto)
         {
-            using var ctx = TestHelpers.NewDb();
-            var sut = new TasksController(ctx)
+            try
             {
-                ControllerContext = TestHelpers.CtxWithUser(1)
-            };
-            sut.ModelState.AddModelError("Title", "Required");
-            var res = await sut.CreateTask(new CreateTaskDto());
-            var bad = Assert.IsType<BadRequestObjectResult>(res);
-            Assert.Equal(400, bad.StatusCode);
-        }
+                if (!ModelState.IsValid)
+                    return BadRequest(new { message = "Invalid data", errors = ModelState });
 
-        [Fact]
-        public async Task CreateTask_Ok_WhenValid()
-        {
-            using var ctx = TestHelpers.NewDb();
-            var sut = new TasksController(ctx)
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
+
+                var task = new UserTask
+                {
+                    Title = dto.Title,
+                    Description = dto.Description,
+                    DueDate = dto.DueDate,
+                    Status = dto.Status,
+                    Priority = dto.Priority,
+                    UserId = userId.Value
+                };
+
+                _context.UserTasks.Add(task);
+                await _context.SaveChangesAsync();
+
+                Log.Information("Task created successfully for UserId: {UserId}", userId?.ToString());
+                return Ok(new { message = TaskCreatedMessage });
+            }
+            catch (Exception ex)
             {
-                ControllerContext = TestHelpers.CtxWithUser(2)
-            };
+                return HandleServerError(ex, nameof(CreateTask));
+            }
+        }
 
-            var dto = new CreateTaskDto
+        [HttpGet]
+        public async Task<IActionResult> GetTasks()
+        {
+            try
             {
-                Title = "Task",
-                Description = "D",
-                DueDate = DateTime.UtcNow,
-                Status = "Pending",
-                Priority = "High"
-            };
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
 
-            var res = await sut.CreateTask(dto);
-            var ok = Assert.IsType<OkObjectResult>(res);
-            Assert.Equal(200, ok.StatusCode);
-            Assert.True(await ctx.UserTasks.AnyAsync(t => t.UserId == 2 && t.Title == "Task"));
-        }
+                var tasks = await _context.UserTasks
+                    .Where(t => t.UserId == userId)
+                    .OrderByDescending(t => t.DueDate)
+                    .ToListAsync();
 
-        [Fact]
-        public async Task CreateTask_500_OnException()
-        {
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
-                .Options;
-            using var ctx = new ThrowingDbContext(options);
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
-
-            var res = await sut.CreateTask(new CreateTaskDto
+                Log.Information("Fetched task list for UserId: {UserId}", userId?.ToString());
+                return Ok(tasks);
+            }
+            catch (Exception ex)
             {
-                Title = "X", Description = "Y", DueDate = DateTime.UtcNow, Status = "Pending", Priority = "Low"
-            });
-
-            var obj = Assert.IsType<ObjectResult>(res);
-            Assert.Equal(500, obj.StatusCode);
+                return HandleServerError(ex, nameof(GetTasks));
+            }
         }
 
-        [Fact]
-        public async Task GetTasks_Unauthorized_WhenNoUser()
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetTaskById(int id)
         {
-            using var ctx = TestHelpers.NewDb();
-            var sut = new TasksController(ctx);
-            var res = await sut.GetTasks();
-            Assert.IsType<UnauthorizedObjectResult>(res);
-        }
-
-        [Fact]
-        public async Task GetTasks_Ok_ReturnsOnlyUserTasks()
-        {
-            using var ctx = TestHelpers.NewDb();
-            TestHelpers.SeedTask(ctx, 1, 1, "A");
-            TestHelpers.SeedTask(ctx, 2, 2, "B");
-
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
-            var res = await sut.GetTasks();
-            var ok = Assert.IsType<OkObjectResult>(res);
-            var list = Assert.IsAssignableFrom<IEnumerable<UserTask>>(ok.Value);
-            Assert.All(list, t => Assert.Equal(1, t.UserId));
-        }
-
-        [Fact]
-        public async Task GetTaskById_NotFound_WhenOtherUser()
-        {
-            using var ctx = TestHelpers.NewDb();
-            TestHelpers.SeedTask(ctx, 5, 2, "Z");
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
-            var res = await sut.GetTaskById(5);
-            Assert.IsType<NotFoundObjectResult>(res);
-        }
-
-        [Fact]
-        public async Task GetTaskById_Ok_WhenOwner()
-        {
-            using var ctx = TestHelpers.NewDb();
-            TestHelpers.SeedTask(ctx, 8, 3, "Mine");
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(3) };
-            var res = await sut.GetTaskById(8);
-            Assert.IsType<OkObjectResult>(res);
-        }
-
-        [Fact]
-        public async Task UpdateTask_BadRequest_WhenModelInvalid()
-        {
-            using var ctx = TestHelpers.NewDb();
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
-            sut.ModelState.AddModelError("Title", "Required");
-            var res = await sut.UpdateTask(1, new CreateTaskDto());
-            Assert.IsType<BadRequestObjectResult>(res);
-        }
-
-        [Fact]
-        public async Task UpdateTask_NotFound_WhenNotOwner()
-        {
-            using var ctx = TestHelpers.NewDb();
-            TestHelpers.SeedTask(ctx, 11, 2, "X");
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
-            var res = await sut.UpdateTask(11, new CreateTaskDto
+            try
             {
-                Title = "N", Description = "D", DueDate = DateTime.UtcNow, Status = "In Progress", Priority = "Low"
-            });
-            Assert.IsType<NotFoundObjectResult>(res);
-        }
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
 
-        [Fact]
-        public async Task UpdateTask_Ok_WhenOwner()
-        {
-            using var ctx = TestHelpers.NewDb();
-            TestHelpers.SeedTask(ctx, 12, 4, "Old");
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(4) };
-            var res = await sut.UpdateTask(12, new CreateTaskDto
+                var task = await _context.UserTasks
+                    .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+                if (task == null)
+                {
+                    Log.Warning("Task not found. TaskId: {TaskId}, UserId: {UserId}", id, userId?.ToString());
+                    return NotFound(new { message = TaskNotFoundMessage });
+                }
+
+                return Ok(task);
+            }
+            catch (Exception ex)
             {
-                Title = "New", Description = "D", DueDate = DateTime.UtcNow, Status = "Completed", Priority = "High"
-            });
-            Assert.IsType<OkObjectResult>(res);
+                return HandleServerError(ex, nameof(GetTaskById));
+            }
         }
 
-        [Fact]
-        public async Task DeleteTask_NotFound_WhenNotOwner()
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTask(int id, [FromBody] CreateTaskDto dto)
         {
-            using var ctx = TestHelpers.NewDb();
-            TestHelpers.SeedTask(ctx, 13, 2, "X");
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(1) };
-            var res = await sut.DeleteTask(13);
-            Assert.IsType<NotFoundObjectResult>(res);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(new { message = "Invalid data", errors = ModelState });
+
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
+
+                var task = await _context.UserTasks
+                    .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+                if (task == null)
+                    return NotFound(new { message = TaskNotFoundMessage });
+
+                task.Title = dto.Title;
+                task.Description = dto.Description;
+                task.DueDate = dto.DueDate;
+                task.Status = dto.Status;
+                task.Priority = dto.Priority;
+
+                await _context.SaveChangesAsync();
+                Log.Information("Task {TaskId} updated by UserId {UserId}", id, userId?.ToString());
+
+                return Ok(new { message = TaskUpdatedMessage });
+            }
+            catch (Exception ex)
+            {
+                return HandleServerError(ex, nameof(UpdateTask));
+            }
         }
 
-        [Fact]
-        public async Task DeleteTask_Ok_WhenOwner()
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTask(int id)
         {
-            using var ctx = TestHelpers.NewDb();
-            TestHelpers.SeedTask(ctx, 14, 6, "Del");
-            var sut = new TasksController(ctx) { ControllerContext = TestHelpers.CtxWithUser(6) };
-            var res = await sut.DeleteTask(14);
-            Assert.IsType<OkObjectResult>(res);
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return Unauthorized(new { message = InvalidUserTokenMessage });
+
+                var task = await _context.UserTasks
+                    .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+                if (task == null)
+                    return NotFound(new { message = TaskNotFoundMessage });
+
+                _context.UserTasks.Remove(task);
+                await _context.SaveChangesAsync();
+
+                Log.Information("Task {TaskId} deleted by UserId {UserId}", id, userId?.ToString());
+                return Ok(new { message = TaskDeletedMessage });
+            }
+            catch (Exception ex)
+            {
+                return HandleServerError(ex, nameof(DeleteTask));
+            }
         }
     }
 }

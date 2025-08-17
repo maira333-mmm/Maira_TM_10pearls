@@ -1,6 +1,9 @@
 using Backend.Controllers;
 using Backend.Data;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Security.Claims;
 using Xunit;
 
 namespace Backend.Tests
@@ -20,10 +23,21 @@ namespace Backend.Tests
         public void GetCurrentUserId_ReturnsUserId_WhenClaimPresent()
         {
             using var ctx = TestHelpers.NewDb();
+
             var sut = new TestableBaseTaskController(ctx)
             {
-                ControllerContext = TestHelpers.CtxWithUser(userId: 42)
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = new DefaultHttpContext
+                    {
+                        User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                        {
+                            new Claim(ClaimTypes.NameIdentifier, "42")
+                        }))
+                    }
+                }
             };
+
             Assert.Equal(42, sut.ExposeGetCurrentUserId());
         }
 
@@ -31,7 +45,15 @@ namespace Backend.Tests
         public void GetCurrentUserId_ReturnsNull_WhenNoClaim()
         {
             using var ctx = TestHelpers.NewDb();
-            var sut = new TestableBaseTaskController(ctx);
+
+            var sut = new TestableBaseTaskController(ctx)
+            {
+                ControllerContext = new ControllerContext
+                {
+                    HttpContext = new DefaultHttpContext() // No claims here
+                }
+            };
+
             Assert.Null(sut.ExposeGetCurrentUserId());
         }
 
@@ -40,7 +62,10 @@ namespace Backend.Tests
         {
             using var ctx = TestHelpers.NewDb();
             var sut = new TestableBaseTaskController(ctx);
-            var res = sut.ExposeHandleServerError(new InvalidOperationException("x"));
+
+            var ex = new InvalidOperationException("Test exception");
+            var res = sut.ExposeHandleServerError(ex);
+
             var obj = Assert.IsType<ObjectResult>(res);
             Assert.Equal(500, obj.StatusCode);
         }

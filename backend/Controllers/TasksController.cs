@@ -20,7 +20,13 @@ namespace Backend.Controllers
 
         public TasksController(AppDbContext context) : base(context) { }
 
-        // ✅ Create Task
+        // Central error handler
+        private ObjectResult HandleServerError(Exception ex, string method)
+        {
+            Log.Error(ex, "Error in {Method}", method);
+            return StatusCode(500, new { message = "Internal server error" });
+        }
+
         [HttpPost("create")]
         public async Task<IActionResult> CreateTask([FromBody] CreateTaskDto dto)
         {
@@ -55,7 +61,6 @@ namespace Backend.Controllers
             }
         }
 
-        // ✅ Get All Tasks
         [HttpGet]
         public async Task<IActionResult> GetTasks()
         {
@@ -79,7 +84,6 @@ namespace Backend.Controllers
             }
         }
 
-        // ✅ Get Task by ID
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTaskById(int id)
         {
@@ -94,7 +98,7 @@ namespace Backend.Controllers
 
                 if (task == null)
                 {
-                    Log.Warning("Task not found or unauthorized. TaskId: {TaskId}, UserId: {UserId}", id, userId);
+                    Log.Warning("Task not found. TaskId: {TaskId}, UserId: {UserId}", id, userId);
                     return NotFound(new { message = TaskNotFoundMessage });
                 }
 
@@ -106,7 +110,6 @@ namespace Backend.Controllers
             }
         }
 
-        // ✅ Update Task
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(int id, [FromBody] CreateTaskDto dto)
         {
@@ -142,7 +145,6 @@ namespace Backend.Controllers
             }
         }
 
-        // ✅ Delete Task
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
