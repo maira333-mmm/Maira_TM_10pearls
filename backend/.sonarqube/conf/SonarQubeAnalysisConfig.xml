@@ -10,7 +10,7 @@
   <HasBeginStepCommandLineTruststorePassword>false</HasBeginStepCommandLineTruststorePassword>
   <SonarQubeHostUrl>http://localhost:9000</SonarQubeHostUrl>
   <SonarQubeVersion>25.8.0.112029</SonarQubeVersion>
-  <SonarProjectKey>Maira_TM_10Pearls_Backend</SonarProjectKey>
+  <SonarProjectKey>Maira-TM-10Pearls-Backend</SonarProjectKey>
   <AdditionalConfig>
     <ConfigSetting Id="BuildUri" />
     <ConfigSetting Id="TfsUri" />
@@ -148,8 +148,7 @@
   </ServerSettings>
   <LocalSettings>
     <Property Name="sonar.host.url">http://localhost:9000</Property>
-    <Property Name="sonar.cs.opencover.reportsPaths">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\fa5a1ba8-f2eb-4e33-bf96-3157e187f06c\coverage.cobertura.xml</Property>
-    <Property Name="sonar.exclusions">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\fa5a1ba8-f2eb-4e33-bf96-3157e187f06c\coverage.cobertura.xml</Property>
+    <Property Name="sonar.cs.cobertura.reportsPaths">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\coverage.cobertura.xml</Property>
   </LocalSettings>
   <ScannerOptsSettings />
   <AnalyzersSettings>
