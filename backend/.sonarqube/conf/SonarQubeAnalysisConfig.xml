@@ -144,12 +144,12 @@
     <Property Name="sonar.java.jvmframeworkconfig.activate">true</Property>
     <Property Name="sonar.updatecenter.url">https://downloads.sonarsource.com/sonarqube/update/update-center.properties</Property>
     <Property Name="sonar.core.id">147B411E-AZigKj3pW8dmd3UKeLTf</Property>
-    <Property Name="sonar.core.startTime">8/16/2025 6:37:55 PM</Property>
+    <Property Name="sonar.core.startTime">8/18/2025 1:17:34 AM</Property>
   </ServerSettings>
   <LocalSettings>
     <Property Name="sonar.host.url">http://localhost:9000</Property>
-    <Property Name="sonar.cs.opencover.reportsPaths">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\d2b9bee4-2e3c-46ca-8c7d-be70d7f78646\coverage.cobertura.xml</Property>
-    <Property Name="sonar.exclusions">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\d2b9bee4-2e3c-46ca-8c7d-be70d7f78646\coverage.cobertura.xml</Property>
+    <Property Name="sonar.cs.opencover.reportsPaths">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\fa5a1ba8-f2eb-4e33-bf96-3157e187f06c\coverage.cobertura.xml</Property>
+    <Property Name="sonar.exclusions">C:\Maira_TM_10Pearls\Backend.Tests\TestResults\fa5a1ba8-f2eb-4e33-bf96-3157e187f06c\coverage.cobertura.xml</Property>
   </LocalSettings>
   <ScannerOptsSettings />
   <AnalyzersSettings>
