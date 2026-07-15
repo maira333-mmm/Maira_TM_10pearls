@@ -1,378 +1,667 @@
-# Maira_TM_10pearls
-A full‑stack Task Management System built with **ASP.NET Core Web API** and **React (TypeScript)**, using **SQL Server**, **JWT auth**, **Serilog logging**, and **SonarQube** for code quality.
+<div align="center">
+
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&height=210&color=0:1E3A5F,50:2563EB,100:60A5FA&text=Task%20Management%20System&fontColor=ffffff&fontSize=50&fontAlignY=38&desc=Full-Stack%20%7C%20.NET%20%7C%20React%20%7C%20TypeScript&descAlignY=60&animation=fadeIn" alt="Task Management System Header" />
+
+<br>
+
+<img src="https://readme-typing-svg.demolab.com?font=Inter&weight=600&size=20&duration=2800&pause=700&color=2563EB&center=true&vCenter=true&repeat=true&width=700&height=52&lines=Full-Stack+Task+Management+Application.;Built+with+.NET+Core+%7C+React+%7C+TypeScript.;JWT+Authentication+%7C+Admin+%26+User+Panels.;Unit+Testing+with+xUnit+%26+Moq." alt="Typing Animation" />
+
+<br><br>
+
+A comprehensive **Full-Stack Task Management System** built with **.NET Core (C#) backend** and **React + TypeScript frontend**. Features JWT authentication, role-based access control (Admin/User), task CRUD operations, and an admin dashboard with user management.
+
+<br>
+
+<a href="https://github.com/maira333-mmm/Maira_TM_10pearls">
+  <img src="https://img.shields.io/badge/📂_SOURCE_CODE-181717?style=for-the-badge&logo=github&logoColor=white" alt="Source Code"/>
+</a>
+
+<a href="https://github.com/maira333-mmm/Maira_TM_10pearls/commits/main">
+  <img src="https://img.shields.io/github/last-commit/maira333-mmm/Maira_TM_10pearls?style=for-the-badge&label=LAST%20UPDATE" alt="Last Update"/>
+</a>
+
+<br><br>
+
+<img src="https://img.shields.io/badge/.NET_Core-512BD4?style=flat-square&logo=dotnet&logoColor=white"/>
+<img src="https://img.shields.io/badge/C%23-239120?style=flat-square&logo=csharp&logoColor=white"/>
+<img src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB"/>
+<img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white"/>
+<img src="https://img.shields.io/badge/Entity_Framework-512BD4?style=flat-square&logo=dotnet&logoColor=white"/>
+<img src="https://img.shields.io/badge/JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white"/>
+<img src="https://img.shields.io/badge/xUnit-5E2B97?style=flat-square&logo=xunit&logoColor=white"/>
+<img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white"/>
+
+</div>
 
 ---
 
-# Task Management System
+# 📋 Table of Contents
 
-## 📌 Overview
-This project is a **Task Management System** with:
-- **Backend**: ASP.NET Core Web API (.NET 6+)
-- **Frontend**: React + Vite + TypeScript
-- **Database**: SQL Server
-- **Auth**: JWT
-- **Logging**: Serilog
-- **Code Quality**: SonarQube
+- 📖 About
+- ✨ Features
+- 🏗️ Architecture
+- 📁 Project Structure
+- 🗄️ Database Schema
+- 🔐 Authentication & Authorization
+- 🚀 Getting Started
+- 🔧 Installation
+- 💻 Usage Guide
+- 📊 API Endpoints
+- 🧪 Testing
+- 🎨 UI/UX Design
+- 🛠 Technologies Used
+- 🌍 Browser Compatibility
+- 🤝 Contributing
+- 📬 Contact
+- 📄 License
+- 🙏 Acknowledgements
 
 ---
 
-## 📂 Project Structure
+# 📖 About
+
+The **Task Management System** is a full-stack web application designed to help users and administrators manage tasks efficiently. It features a modern React frontend with a robust .NET Core backend API, providing secure authentication, role-based access control, and comprehensive task management capabilities.
+
+## 🎯 Key Highlights
+
+- ✅ **User Authentication** - JWT-based secure login/signup
+- ✅ **Role-Based Access** - Admin and User roles with different permissions
+- ✅ **Task Management** - Create, read, update, delete tasks
+- ✅ **Admin Dashboard** - User management, task oversight, activity monitoring
+- ✅ **Task Filtering** - Filter by status, search by title
+- ✅ **Unit Testing** - xUnit and Moq for backend testing
+- ✅ **Modern UI** - Tailwind CSS with responsive design
+
+---
+
+# ✨ Features
+
+## 👤 User Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔐 **Authentication** | Sign up / Sign in with JWT |
+| 📝 **Task CRUD** | Create, view, edit, delete tasks |
+| 🔍 **Task Filtering** | Filter by status (Completed, In Progress, Pending) |
+| 🔎 **Task Search** | Search tasks by title |
+| 📊 **Dashboard** | View task statistics (completed, pending, in-progress) |
+| 👤 **Profile** | View and manage profile information |
+
+## 👑 Admin Features
+
+| Feature | Description |
+|---------|-------------|
+| 👥 **User Management** | View all users, activate/deactivate accounts |
+| 📋 **Task Oversight** | View all tasks across all users |
+| 🗑️ **Task Management** | Delete any task |
+| 📊 **Admin Dashboard** | Comprehensive statistics and user analytics |
+| ✏️ **Task Editing** | Edit any task |
+| 📈 **Activity Monitoring** | Track user activity |
+
+---
+
+# 🏗️ Architecture
+
+## System Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                      Frontend (React + TypeScript)              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │   Pages     │  │ Components  │  │   Services (API Calls)   │ │
+│  │  (TSX)      │  │   (TSX)     │  │                         │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Backend (.NET Core 8 API)                    │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │ Controllers │  │  Services   │  │   DTOs / Models          │ │
+│  │  (API)      │  │  (Business) │  │                         │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Database (SQL Server)                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │   Users     │  │  UserTasks  │  │  UserLoginAttempts       │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+
+# 🏗️ System Architecture
+
+The application follows a modern client-server architecture consisting of a React frontend, ASP.NET Core Web API backend, Entity Framework Core, and SQL Server.
+
+```text
+                     ┌──────────────────────────────┐
+                     │      React Frontend          │
+                     │   (TypeScript + Vite)        │
+                     └──────────────┬───────────────┘
+                                    │
+                             HTTP / REST API
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │     ASP.NET Core Web API     │
+                     │ JWT Authentication & RBAC    │
+                     └──────────────┬───────────────┘
+                                    │
+                    Entity Framework Core (ORM)
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │        SQL Server DB         │
+                     │ Users • Tasks • Login Logs   │
+                     └──────────────────────────────┘
 ```
-Maira_TM_10Pearls/
+
+---
+
+# 🔐 Authentication Flow
+
+```text
+User Login
+    │
+    ▼
+Enter Email & Password
+    │
+    ▼
+Backend Validates Credentials
+    │
+    ▼
+Generate JWT Token
+    │
+    ▼
+Return Token to React
+    │
+    ▼
+Store Token in Local Storage
+    │
+    ▼
+Attach Token to API Requests
+    │
+    ▼
+Backend Validates JWT
+    │
+    ▼
+Role-Based Authorization
+    │
+    ▼
+Access Protected Resources
+```
+
+---
+
+# 📁 Project Structure
+
+```text
+Maira_TM_10pearls/
 │
-├── Backend/                     # ASP.NET Core Web API
+├── README.md
+├── LICENSE
+├── Maira_TM_10Pearls.sln
+├── sonar-project.properties
+│
+├── backend/
 │   ├── Controllers/
+│   ├── DTO/
 │   ├── Models/
 │   ├── Data/
+│   ├── Services/
+│   ├── Migrations/
 │   ├── Properties/
-│   └── Program.cs
+│   ├── appsettings.json
+│   ├── Program.cs
+│   └── backend.csproj
 │
-├── frontend/                    # React + Vite + TypeScript
-│   ├── src/
+├── Backend.Tests/
+│   ├── Controllers/
+│   ├── AuthControllerTests.cs
+│   ├── DashboardControllerTests.cs
+│   └── Backend.Tests.csproj
+│
+├── frontend/
 │   ├── public/
-│   └── vite.config.ts
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tailwind.config.js
 │
-└── README.md
+├── .gitignore
+└── Project_Video_Demo/
 ```
 
 ---
 
-## 📋 Table of Contents
-- [Prerequisites](#prerequisites)
-- [Backend Setup](#backend-setup)
-- [Frontend Setup](#frontend-setup)
-- [SonarQube Analysis](#sonarqube-analysis)
-- [Serilog Setup](#serilog-setup)
-- [Configuration Files](#configuration-files)
-- [Tech Stack](#tech-stack)
-- [Additional Information](#additional-information)
+# 🗄️ Database Design
+
+## Users
+
+| Column | Type |
+|---------|------|
+| Id | INT |
+| FullName | NVARCHAR(100) |
+| Email | NVARCHAR(100) |
+| PasswordHash | NVARCHAR(255) |
+| Role | NVARCHAR(50) |
+| IsActive | BIT |
+| CreatedAt | DATETIME |
+| LastLogin | DATETIME |
 
 ---
 
-## 🔹 Prerequisites
-Install the following:
-- [.NET SDK 6.0+](https://dotnet.microsoft.com/en-us/download)
-- [Node.js 14+](https://nodejs.org/)
-- npm (comes with Node.js)
-- [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
-- [SonarQube](https://www.sonarqube.org/downloads/)
-- (Optional) [dotnet-sonarscanner](https://docs.sonarsource.com/sonarqube/latest/analyzing-source-code/scanners/sonarscanner-for-dotnet/)
+## UserTasks
+
+| Column | Type |
+|---------|------|
+| Id | INT |
+| Title | NVARCHAR(200) |
+| Description | NVARCHAR(MAX) |
+| Status | NVARCHAR(50) |
+| Priority | NVARCHAR(50) |
+| DueDate | DATETIME |
+| UserId | INT |
 
 ---
 
-## 🚀 Backend Setup
+## UserLoginAttempts
 
-### 1️⃣ Clone the Repository
+| Column | Type |
+|---------|------|
+| Id | INT |
+| UserId | INT |
+| IsSuccessful | BIT |
+| AttemptTime | DATETIME |
+| IPAddress | NVARCHAR(50) |
+| UserAgent | NVARCHAR(255) |
+
+---
+
+# 🔐 Authentication & Authorization
+
+## JWT Authentication
+
+The application uses JSON Web Tokens (JWT) for secure authentication.
+
+Authentication process:
+
+- User logs in with email and password
+- Credentials are validated
+- JWT token is generated
+- Token is stored in Local Storage
+- Every API request includes the token
+- Backend validates the token
+- User permissions are determined by role
+
+---
+
+## Password Security
+
+Passwords are securely hashed using **SHA-256** before storage.
+
+---
+
+## User Roles
+
+| Role | Permissions |
+|------|-------------|
+| User | Manage own tasks |
+| Admin | Manage all users and tasks |
+
+---
+
+# 🚀 Getting Started
+
+## Requirements
+
+- .NET 8 SDK
+- Node.js 18+
+- SQL Server
+- npm
+- Visual Studio 2022 / VS Code
+
+---
+
+## Clone Repository
+
 ```bash
 git clone https://github.com/maira333-mmm/Maira_TM_10pearls.git
-cd Maira_TM_10pearls/Backend
+
+cd Maira_TM_10pearls
 ```
 
-### 2️⃣ Configure Database and JWT
-Create or edit **Backend/appsettings.json**:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=YOUR_SERVER_NAME\\SQLEXPRESS;Database=TaskManagement;Trusted_Connection=True;TrustServerCertificate=True"
-  },
-  "Jwt": {
-    "Key": "<YOUR_JWT_SECRET_KEY>",
-    "Issuer": "Taskmanagement.com",
-    "Audience": "Taskmanagement.com"
-  },
-  "Serilog": {
-    "MinimumLevel": "Information",
-    "WriteTo": [
-      { "Name": "Console" },
-      { "Name": "File", "Args": { "path": "Logs/log-.txt", "rollingInterval": "Day" } }
-    ],
-    "Enrich": [ "FromLogContext", "WithMachineName", "WithProcessId", "WithThreadId" ]
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "AllowedHosts": "*"
-}
-```
+---
 
-> 🔒 **Security Note**: Never commit real secrets to Git. Use [User Secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) or environment variables for `Jwt:Key` in development, and a secure secret store in production.
+## Backend Setup
 
-### 3️⃣ Run EF Core Migrations
 ```bash
-dotnet tool install --global dotnet-ef   # run once if not installed
-dotnet ef migrations add InitialCreate
-dotnet ef database update
-```
+cd backend
 
-### 4️⃣ Restore & Run
-```bash
 dotnet restore
+
+dotnet ef database update
+
 dotnet run
 ```
-Backend API default URL:
+
+Backend
+
 ```
 http://localhost:5146
 ```
 
-> If your port differs, check `Properties/launchSettings.json` or console output.
-
 ---
 
-## 🎨 Frontend Setup
+## Frontend Setup
 
-### 1️⃣ Navigate to Frontend
 ```bash
-cd ../frontend
-```
+cd frontend
 
-### 2️⃣ Install Dependencies
-```bash
 npm install
-```
 
-### 3️⃣ Start Frontend
-```bash
 npm run dev
 ```
-Frontend default URL:
+
+Frontend
+
 ```
 http://localhost:5173
 ```
 
 ---
 
-## 📊 SonarQube Analysis
-Run analysis from the **Backend** directory (ensure SonarQube server is running at `http://localhost:9000` and you have a token). Replace placeholders with your values.
+## Environment Variables
+
+Create
+
+```
+.env
+```
+
+```env
+VITE_API_URL=http://localhost:5146/api
+```
+
+---
+
+# 💻 Features
+
+## Authentication
+
+- User Registration
+- User Login
+- JWT Authentication
+- Protected Routes
+- Role Based Authorization
+
+---
+
+## Task Management
+
+- Create Task
+- Edit Task
+- Delete Task
+- View Task
+- Search Tasks
+- Filter Tasks
+- Status Management
+
+---
+
+## Dashboard
+
+- Task Statistics
+- Completed Tasks
+- Pending Tasks
+- In Progress Tasks
+- User Profile
+
+---
+
+## Admin Panel
+
+- User Management
+- Activate / Deactivate Users
+- View All Tasks
+- Delete Any Task
+- Dashboard Analytics
+
+---
+
+# 📊 API Endpoints
+
+## Authentication
+
+| Method | Endpoint |
+|---------|----------|
+| POST | /api/auth/signup |
+| POST | /api/auth/login |
+
+---
+
+## Tasks
+
+| Method | Endpoint |
+|---------|----------|
+| GET | /api/tasks |
+| GET | /api/tasks/{id} |
+| POST | /api/tasks/create |
+| PUT | /api/tasks/{id} |
+| DELETE | /api/tasks/{id} |
+
+---
+
+## Dashboard
+
+| Method | Endpoint |
+|---------|----------|
+| GET | /api/dashboard/summary |
+
+---
+
+## Admin
+
+| Method | Endpoint |
+|---------|----------|
+| GET | /api/admin-dashboard/summary |
+| GET | /api/admin-dashboard/users |
+| PUT | /api/admin-dashboard/toggle-active/{id} |
+| DELETE | /api/admin-dashboard/delete-task/{id} |
+| POST | /api/admin/tasks |
+| PUT | /api/admin/tasks/{id} |
+| DELETE | /api/admin/tasks/{id} |
+
+---
+
+# 🧪 Testing
+
+Run backend tests
 
 ```bash
-# 1) Begin (replace values)
-dotnet sonarscanner begin \
-/k:"Maira_TM_10Pearls_Backend" \
-/d:sonar.login="<YOUR_SONAR_TOKEN>" \
-/d:sonar.host.url="http://localhost:9000" \
-/d:sonar.cs.opencover.reportsPaths="C:\\Path\\To\\Backend.Tests\\TestResults\\<GUID>\\coverage.cobertura.xml"
+cd Backend.Tests
 
-# 2) Build
-dotnet build
-
-# 3) End (replace token)
-dotnet sonarscanner end /d:sonar.login="<YOUR_SONAR_TOKEN>"
-```
-
-> 💡 **Tip**: If you use `coverlet.collector` with xUnit/NUnit/MSTest, run tests with coverage first, then pass the generated `coverage.cobertura.xml` path to Sonar.
-
----
-
-## 🧾 Serilog Setup
-
-### Option A — Configure via `Program.cs`
-```csharp
-using Backend.Data;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Serilog;
-using System.Net;
-using System.Text;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// 1) Serilog: read from appsettings.json and add sinks
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .CreateLogger();
-
-builder.Host.UseSerilog();
-
-// 2) DbContext
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// 3) CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod());
-});
-
-// 4) JWT
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        var config = builder.Configuration;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = config["Jwt:Issuer"],
-            ValidateAudience = true,
-            ValidAudience = config["Jwt:Audience"],
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!)),
-            ValidateLifetime = true
-        };
-    });
-
-builder.Services.AddControllers();
-
-var app = builder.Build();
-
-// Global exception handler
-app.UseExceptionHandler(errorApp =>
-{
-    errorApp.Run(async context =>
-    {
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        context.Response.ContentType = "application/json";
-
-        var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
-        if (exceptionHandlerPathFeature?.Error != null)
-        {
-            Log.Error(exceptionHandlerPathFeature.Error, "Unhandled exception occurred");
-        }
-
-        await context.Response.WriteAsJsonAsync(new
-        {
-            StatusCode = context.Response.StatusCode,
-            Message = "Internal Server Error. Please try again later."
-        });
-    });
-});
-
-// Request logging
-app.UseSerilogRequestLogging();
-
-app.UseCors("AllowFrontend");
-app.UseRouting();
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
-
-// Flush logs on shutdown
-Log.CloseAndFlush();
-```
-
-### Option B — Configure via `appsettings.json`
-Already included above (see `Serilog` section). Logs will be written to console and `Logs/log-.txt` with daily rolling.
-
----
-
-## ⚙ Configuration Files
-
-**`Backend/Properties/launchSettings.json`**
-```json
-{
-  "$schema": "https://json.schemastore.org/launchsettings.json",
-  "profiles": {
-    "Backend": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "applicationUrl": "http://localhost:5146",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    "https": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": false",
-      "applicationUrl": "https://localhost:7103;http://localhost:5146",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    }
-  }
-}
-```
-
-**`frontend/vite.config.ts`**
-```ts
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    allowedHosts: ['.ngrok-free.app']
-  }
-})
-```
-
-**`frontend/package.json`**
-```json
-{
-  "name": "frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "axios": "^1.11.0",
-    "chart.js": "^4.5.0",
-    "react": "^19.1.0",
-    "react-chartjs-2": "^5.3.0",
-    "react-dom": "^19.1.0",
-    "react-helmet": "^6.1.0",
-    "react-router-dom": "^7.7.1"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.30.1",
-    "@types/react": "^19.1.9",
-    "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react": "^4.6.0",
-    "autoprefixer": "^10.4.21",
-    "eslint": "^9.30.1",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^16.3.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.3",
-    "typescript": "~5.8.3",
-    "typescript-eslint": "^8.35.1",
-    "vite": "^7.0.4"
-  }
-}
+dotnet test
 ```
 
 ---
 
-## 🛠 Tech Stack
-**Backend:**
-- ASP.NET Core Web API
+# 🎨 UI Features
+
+- Responsive Layout
+- Sidebar Navigation
+- Dashboard Cards
+- Status Badges
+- Glassmorphism UI
+- Gradient Buttons
+- Mobile Friendly
+
+---
+
+# 🛠️ Tech Stack
+
+## Backend
+
+- ASP.NET Core 8
+- C#
 - Entity Framework Core
 - SQL Server
-- Serilog Logging
 - JWT Authentication
+- xUnit
+- Moq
+- Serilog
 
-**Frontend:**
-- React 19 + TypeScript
+## Frontend
+
+- React
+- TypeScript
 - Vite
+- Tailwind CSS
 - Axios
-- TailwindCSS
+- React Router
 - Chart.js
 
-**Testing & Quality:**
-- xUnit (planned)
-- SonarQube
+---
+
+# 🌐 Browser Support
+
+| Browser | Support |
+|----------|---------|
+| Chrome | ✅ |
+| Firefox | ✅ |
+| Edge | ✅ |
+| Safari | ✅ |
+| Opera | ✅ |
+| Mobile | ✅ |
 
 ---
 
-## 📌 Additional Information
-- API (dev): `http://localhost:5146`
-- Frontend (dev): `http://localhost:5173`
-- Ensure **SQL Server** is running before starting the backend.
-- Replace all placeholders (`YOUR_SERVER_NAME`, `<YOUR_JWT_SECRET_KEY>`, `<YOUR_SONAR_TOKEN>`, coverage path, etc.) with your actual values.
+# 🤝 Contributing
+
+```text
+Fork Repository
+      │
+      ▼
+Create Feature Branch
+      │
+      ▼
+Commit Changes
+      │
+      ▼
+Push Branch
+      │
+      ▼
+Open Pull Request
+```
 
 ---
+
+# 📬 Contact
+
+<div align="center">
+
+## 👩‍💻 Maira Alam
+
+📧 **Email:** maira.alam33@gmail.com
+
+🐙 **GitHub:** https://github.com/maira333-mmm
+
+💼 **LinkedIn:** https://www.linkedin.com/in/maira-a-48699630b/
+
+🌐 **Portfolio:** https://maira-alam-o2p20gi.gamma.site/
+
+</div>
+
+---
+
+# 📄 License
+
+Licensed under the **MIT License**.
+
+---
+
+# 🚀 Future Enhancements
+
+| Feature | Description |
+|----------|-------------|
+| 📱 Mobile App | React Native |
+| 🔔 Notifications | Email & SMS |
+| 📊 Analytics | Productivity Reports |
+| 🌐 Multi-language | Localization |
+| 🗓 Calendar View | Calendar Integration |
+| 🏷 Labels | Task Categories |
+| 👥 Collaboration | Task Assignment |
+
+---
+
+# 🐛 Troubleshooting
+
+<details>
+<summary><b>Backend Not Starting</b></summary>
+
+```bash
+dotnet ef database update
+
+dotnet run
+```
+
+</details>
+
+<details>
+<summary><b>Frontend Build Failing</b></summary>
+
+```bash
+rm -rf node_modules package-lock.json
+
+npm install
+
+npm run build
+```
+
+</details>
+
+<details>
+<summary><b>CORS Errors</b></summary>
+
+Ensure the frontend URL is allowed in **Program.cs** and verify that both frontend and backend are running.
+
+</details>
+
+---
+
+# 🙏 Acknowledgements
+
+- ASP.NET Core
+- React
+- Entity Framework Core
+- SQL Server
+- JWT Authentication
+- Tailwind CSS
+- GitHub
+
+---
+
+<div align="center">
+
+## ❤️ Built with ASP.NET Core, React & TypeScript
+
+Made with 💙 by **Maira Alam**
+
+⭐ If you found this project helpful, consider giving it a **Star**.
+
+</div>
+
+
+
+
+
+
+
+
+
+
